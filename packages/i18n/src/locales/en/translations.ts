@@ -631,6 +631,12 @@ export default {
     close_peek_view: "Close the peek view",
     toggle_peek_view_layout: "Toggle peek view layout",
     options: "Options",
+    hours: {
+      estimate: "Est. Hours",
+      actual: "Actual Hours",
+      completed: "Completed Hours",
+      remaining: "Remaining Hours",
+    },
     duration: "Duration",
     today: "Today",
     week: "Week",

@@ -160,6 +160,11 @@ class Issue(ProjectBaseModel):
     is_draft = models.BooleanField(default=False)
     external_source = models.CharField(max_length=255, null=True, blank=True)
     external_id = models.CharField(max_length=255, blank=True, null=True)
+    # Work hours tracking (hours-based, replaces EstimatePoint UI)
+    estimate_hours = models.DecimalField(max_digits=7, decimal_places=1, null=True, blank=True)
+    actual_hours = models.DecimalField(max_digits=7, decimal_places=1, null=True, blank=True)
+    completed_hours = models.DecimalField(max_digits=7, decimal_places=1, null=True, blank=True)
+    remaining_hours = models.DecimalField(max_digits=7, decimal_places=1, null=True, blank=True)
     type = models.ForeignKey(
         "db.IssueType",
         on_delete=models.SET_NULL,

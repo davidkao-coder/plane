@@ -779,6 +779,12 @@ export default {
     close_peek_view: "關閉預覽檢視",
     toggle_peek_view_layout: "切換預覽檢視版面配置",
     options: "選項",
+    hours: {
+      estimate: "預計工時",
+      actual: "實際工時",
+      completed: "已完成工時",
+      remaining: "剩餘工時",
+    },
     duration: "時長",
     today: "今天",
     week: "週",

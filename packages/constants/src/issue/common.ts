@@ -151,6 +151,10 @@ export const ISSUE_DISPLAY_PROPERTIES_KEYS: (keyof IIssueDisplayProperties)[] = 
   "link",
   "attachment_count",
   "estimate",
+  "estimate_hours",
+  "actual_hours",
+  "completed_hours",
+  "remaining_hours",
   "created_on",
   "updated_on",
   "modules",
@@ -205,6 +209,22 @@ export const ISSUE_DISPLAY_PROPERTIES: {
   {
     key: "estimate",
     titleTranslationKey: "common.estimate",
+  },
+  {
+    key: "estimate_hours",
+    titleTranslationKey: "common.hours.estimate",
+  },
+  {
+    key: "actual_hours",
+    titleTranslationKey: "common.hours.actual",
+  },
+  {
+    key: "completed_hours",
+    titleTranslationKey: "common.hours.completed",
+  },
+  {
+    key: "remaining_hours",
+    titleTranslationKey: "common.hours.remaining",
   },
   { key: "modules", titleTranslationKey: "common.module" },
   { key: "cycle", titleTranslationKey: "common.cycle" },

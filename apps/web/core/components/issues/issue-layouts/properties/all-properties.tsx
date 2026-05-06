@@ -47,6 +47,7 @@ import { WorkItemLayoutAdditionalProperties } from "@/plane-web/components/issue
 // local components
 import { IssuePropertyLabels } from "./labels";
 import { WithDisplayPropertiesHOC } from "./with-display-properties-HOC";
+import { HoursPropertyInline } from "@/components/issues/issue-detail/hours-property";
 
 export interface IIssueProperties {
   issue: TIssue;
@@ -160,6 +161,22 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
 
   const handleEstimate = async (value: string | undefined) => {
     if (updateIssue) await updateIssue(issue.project_id, issue.id, { estimate_point: value });
+  };
+
+  const handleEstimateHours = async (value: number | null) => {
+    if (updateIssue) await updateIssue(issue.project_id, issue.id, { estimate_hours: value });
+  };
+
+  const handleActualHours = async (value: number | null) => {
+    if (updateIssue) await updateIssue(issue.project_id, issue.id, { actual_hours: value });
+  };
+
+  const handleCompletedHours = async (value: number | null) => {
+    if (updateIssue) await updateIssue(issue.project_id, issue.id, { completed_hours: value });
+  };
+
+  const handleRemainingHours = async (value: number | null) => {
+    if (updateIssue) await updateIssue(issue.project_id, issue.id, { remaining_hours: value });
   };
 
   const workItemLink = generateWorkItemLink({
@@ -389,6 +406,50 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
           </div>
         </WithDisplayPropertiesHOC>
       )}
+
+      {/* estimate hours */}
+      <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="estimate_hours">
+        <div className="h-5 flex items-center" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+          <HoursPropertyInline
+            value={issue.estimate_hours != null ? Number(issue.estimate_hours) : null}
+            onChange={handleEstimateHours}
+            disabled={isReadOnly}
+          />
+        </div>
+      </WithDisplayPropertiesHOC>
+
+      {/* actual hours */}
+      <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="actual_hours">
+        <div className="h-5 flex items-center" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+          <HoursPropertyInline
+            value={issue.actual_hours != null ? Number(issue.actual_hours) : null}
+            onChange={handleActualHours}
+            disabled={isReadOnly}
+          />
+        </div>
+      </WithDisplayPropertiesHOC>
+
+      {/* completed hours */}
+      <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="completed_hours">
+        <div className="h-5 flex items-center" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+          <HoursPropertyInline
+            value={issue.completed_hours != null ? Number(issue.completed_hours) : null}
+            onChange={handleCompletedHours}
+            disabled={isReadOnly}
+          />
+        </div>
+      </WithDisplayPropertiesHOC>
+
+      {/* remaining hours */}
+      <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="remaining_hours">
+        <div className="h-5 flex items-center" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
+          <HoursPropertyInline
+            value={issue.remaining_hours != null ? Number(issue.remaining_hours) : null}
+            onChange={handleRemainingHours}
+            disabled={isReadOnly}
+          />
+        </div>
+      </WithDisplayPropertiesHOC>
 
       {/* extra render properties */}
       {/* sub-issues */}

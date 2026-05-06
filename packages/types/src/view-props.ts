@@ -170,6 +170,10 @@ export interface IIssueDisplayProperties {
   link?: boolean;
   attachment_count?: boolean;
   estimate?: boolean;
+  estimate_hours?: boolean;
+  actual_hours?: boolean;
+  completed_hours?: boolean;
+  remaining_hours?: boolean;
   created_on?: boolean;
   updated_on?: boolean;
   modules?: boolean;

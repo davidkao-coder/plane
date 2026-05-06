@@ -44,6 +44,7 @@ import { TransferHopInfo } from "@/plane-web/components/issues/issue-details/sid
 import { IssueWorklogProperty } from "@/plane-web/components/issues/worklog/property";
 import { SidebarPropertyListItem } from "@/components/common/layout/sidebar/property-list-item";
 import { IssueCycleSelect } from "./cycle-select";
+import { HoursProperty } from "./hours-property";
 import { IssueLabel } from "./label";
 import { IssueModuleSelect } from "./module-select";
 import type { TIssueOperations } from "./root";
@@ -185,6 +186,50 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
                   clearIconClassName="h-3 w-3 hidden group-hover:inline text-primary"
                 />
                 {issue.target_date && <DateAlert date={issue.target_date} workItem={issue} projectId={projectId} />}
+              </div>
+            </SidebarPropertyListItem>
+
+            <SidebarPropertyListItem icon={EstimatePropertyIcon} label={t("common.hours.estimate")}>
+              <div className="w-full px-2 py-1">
+                <HoursProperty
+                  label=""
+                  value={issue.estimate_hours != null ? Number(issue.estimate_hours) : null}
+                  onChange={(val) => issueOperations.update(workspaceSlug, projectId, issueId, { estimate_hours: val })}
+                  disabled={!isEditable}
+                />
+              </div>
+            </SidebarPropertyListItem>
+
+            <SidebarPropertyListItem icon={EstimatePropertyIcon} label={t("common.hours.actual")}>
+              <div className="w-full px-2 py-1">
+                <HoursProperty
+                  label=""
+                  value={issue.actual_hours != null ? Number(issue.actual_hours) : null}
+                  onChange={(val) => issueOperations.update(workspaceSlug, projectId, issueId, { actual_hours: val })}
+                  disabled={!isEditable}
+                />
+              </div>
+            </SidebarPropertyListItem>
+
+            <SidebarPropertyListItem icon={EstimatePropertyIcon} label={t("common.hours.completed")}>
+              <div className="w-full px-2 py-1">
+                <HoursProperty
+                  label=""
+                  value={issue.completed_hours != null ? Number(issue.completed_hours) : null}
+                  onChange={(val) => issueOperations.update(workspaceSlug, projectId, issueId, { completed_hours: val })}
+                  disabled={!isEditable}
+                />
+              </div>
+            </SidebarPropertyListItem>
+
+            <SidebarPropertyListItem icon={EstimatePropertyIcon} label={t("common.hours.remaining")}>
+              <div className="w-full px-2 py-1">
+                <HoursProperty
+                  label=""
+                  value={issue.remaining_hours != null ? Number(issue.remaining_hours) : null}
+                  onChange={(val) => issueOperations.update(workspaceSlug, projectId, issueId, { remaining_hours: val })}
+                  disabled={!isEditable}
+                />
               </div>
             </SidebarPropertyListItem>
 

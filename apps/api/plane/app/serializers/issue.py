@@ -799,6 +799,10 @@ class IssueSerializer(DynamicBaseSerializer):
             "link_count",
             "is_draft",
             "archived_at",
+            "estimate_hours",
+            "actual_hours",
+            "completed_hours",
+            "remaining_hours",
         ]
         read_only_fields = fields
 
@@ -857,6 +861,11 @@ class IssueListDetailSerializer(serializers.Serializer):
             "sub_issues_count": instance.sub_issues_count,
             "attachment_count": instance.attachment_count,
             "link_count": instance.link_count,
+            # Hours tracking fields
+            "estimate_hours": instance.estimate_hours,
+            "actual_hours": instance.actual_hours,
+            "completed_hours": instance.completed_hours,
+            "remaining_hours": instance.remaining_hours,
         }
 
         # Handle expanded fields only when requested - using direct field access
