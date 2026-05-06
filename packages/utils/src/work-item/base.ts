@@ -310,6 +310,10 @@ export const getComputedDisplayProperties = (
   modules: displayProperties?.modules ?? true,
   cycle: displayProperties?.cycle ?? true,
   issue_type: displayProperties?.issue_type ?? true,
+  estimate_hours: displayProperties?.estimate_hours ?? false,
+  actual_hours: displayProperties?.actual_hours ?? false,
+  completed_hours: displayProperties?.completed_hours ?? false,
+  remaining_hours: displayProperties?.remaining_hours ?? false,
 });
 
 export const generateWorkItemLink = ({

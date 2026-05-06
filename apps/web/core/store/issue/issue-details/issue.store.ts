@@ -170,6 +170,10 @@ export class IssueStore implements IIssueStore {
       is_draft: issue?.is_draft,
       is_subscribed: issue?.is_subscribed,
       is_epic: issue?.is_epic,
+      estimate_hours: issue?.estimate_hours,
+      actual_hours: issue?.actual_hours,
+      completed_hours: issue?.completed_hours,
+      remaining_hours: issue?.remaining_hours,
     };
 
     this.rootIssueDetailStore.rootIssueStore.issues.addIssue([issuePayload]);
