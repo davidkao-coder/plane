@@ -210,7 +210,17 @@ const getModuleColumns = (): IGroupByColumn[] | undefined => {
 
 const getStateColumns = ({ projectId }: TGetColumns): IGroupByColumn[] | undefined => {
   const { getProjectStates, projectStates } = store.state;
-  const _states = projectId ? getProjectStates(projectId) : projectStates;
+  let _states;
+  if (projectId) {
+    _states = getProjectStates(projectId);
+  } else if (projectStates) {
+    _states = projectStates;
+  } else {
+    // Cross-project view (e.g. My Work / profile page): no router projectId available,
+    // fall back to all states loaded in the stateMap across all projects.
+    const allStates = Object.values(store.state.stateMap ?? {});
+    _states = allStates.length > 0 ? allStates : undefined;
+  }
   if (!_states) return;
   // map project states to group by columns
   return _states.map((state) => ({
