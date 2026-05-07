@@ -245,6 +245,10 @@ export const SPREADSHEET_PROPERTY_LIST: (keyof IIssueDisplayProperties)[] = [
   "link",
   "attachment_count",
   "sub_issue_count",
+  "estimate_hours",
+  "actual_hours",
+  "completed_hours",
+  "remaining_hours",
 ];
 
 export const SPREADSHEET_PROPERTY_DETAILS: {
@@ -368,6 +372,38 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     descendingOrderKey: "sub_issues_count",
     descendingOrderTitle: "Least",
     icon: "LayersIcon",
+  },
+  estimate_hours: {
+    i18n_title: "common.hours.estimate",
+    ascendingOrderKey: "estimate_hours",
+    ascendingOrderTitle: "Low",
+    descendingOrderKey: "-estimate_hours",
+    descendingOrderTitle: "High",
+    icon: "EstimatePropertyIcon",
+  },
+  actual_hours: {
+    i18n_title: "common.hours.actual",
+    ascendingOrderKey: "actual_hours",
+    ascendingOrderTitle: "Low",
+    descendingOrderKey: "-actual_hours",
+    descendingOrderTitle: "High",
+    icon: "EstimatePropertyIcon",
+  },
+  completed_hours: {
+    i18n_title: "common.hours.completed",
+    ascendingOrderKey: "completed_hours",
+    ascendingOrderTitle: "Low",
+    descendingOrderKey: "-completed_hours",
+    descendingOrderTitle: "High",
+    icon: "EstimatePropertyIcon",
+  },
+  remaining_hours: {
+    i18n_title: "common.hours.remaining",
+    ascendingOrderKey: "remaining_hours",
+    ascendingOrderTitle: "Low",
+    descendingOrderKey: "-remaining_hours",
+    descendingOrderTitle: "High",
+    icon: "EstimatePropertyIcon",
   },
 };
 

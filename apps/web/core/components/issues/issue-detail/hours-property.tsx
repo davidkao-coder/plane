@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import { Clock } from "lucide-react";
+import { Tooltip } from "@plane/propel/tooltip";
 import { cn } from "@plane/utils";
 
 type THoursPropertyProps = {
@@ -85,8 +86,8 @@ export const HoursProperty: React.FC<THoursPropertyProps> = ({
 
 // Compact inline variant for list/kanban views (no label, icon only on hover)
 export const HoursPropertyInline: React.FC<
-  Omit<THoursPropertyProps, "label"> & { icon?: React.ReactNode }
-> = ({ value, onChange, disabled = false, className, icon }) => {
+  Omit<THoursPropertyProps, "label"> & { icon?: React.ReactNode; tooltip?: string }
+> = ({ value, onChange, disabled = false, className, icon, tooltip }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -115,7 +116,7 @@ export const HoursPropertyInline: React.FC<
 
   const displayText = value != null ? `${value}h` : "-";
 
-  return (
+  const content = (
     <div className={cn("flex items-center gap-1 text-xs", className)}>
       {icon && <span className="text-custom-text-300">{icon}</span>}
       {isEditing ? (
@@ -147,4 +148,14 @@ export const HoursPropertyInline: React.FC<
       )}
     </div>
   );
+
+  if (tooltip) {
+    return (
+      <Tooltip tooltipContent={tooltip} position="top">
+        {content}
+      </Tooltip>
+    );
+  }
+
+  return content;
 };

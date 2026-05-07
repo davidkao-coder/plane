@@ -44,6 +44,10 @@ import {
   SpreadsheetStateColumn,
   SpreadsheetSubIssueColumn,
   SpreadsheetUpdatedOnColumn,
+  SpreadsheetEstimateHoursColumn,
+  SpreadsheetActualHoursColumn,
+  SpreadsheetCompletedHoursColumn,
+  SpreadsheetRemainingHoursColumn,
 } from "@/components/issues/issue-layouts/spreadsheet/columns";
 // store
 import { store } from "@/lib/store-context";
@@ -109,6 +113,10 @@ export const SPREADSHEET_COLUMNS: { [key in keyof IIssueDisplayProperties]: TSpr
   sub_issue_count: SpreadsheetSubIssueColumn,
   updated_on: SpreadsheetUpdatedOnColumn,
   attachment_count: SpreadsheetAttachmentColumn,
+  estimate_hours: SpreadsheetEstimateHoursColumn,
+  actual_hours: SpreadsheetActualHoursColumn,
+  completed_hours: SpreadsheetCompletedHoursColumn,
+  remaining_hours: SpreadsheetRemainingHoursColumn,
 };
 
 export const useGroupByOptions = (

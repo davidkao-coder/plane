@@ -414,6 +414,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
             value={issue.estimate_hours != null ? Number(issue.estimate_hours) : null}
             onChange={handleEstimateHours}
             disabled={isReadOnly}
+            tooltip={t("common.hours.estimate")}
           />
         </div>
       </WithDisplayPropertiesHOC>
@@ -425,6 +426,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
             value={issue.actual_hours != null ? Number(issue.actual_hours) : null}
             onChange={handleActualHours}
             disabled={isReadOnly}
+            tooltip={t("common.hours.actual")}
           />
         </div>
       </WithDisplayPropertiesHOC>
@@ -436,6 +438,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
             value={issue.completed_hours != null ? Number(issue.completed_hours) : null}
             onChange={handleCompletedHours}
             disabled={isReadOnly}
+            tooltip={t("common.hours.completed")}
           />
         </div>
       </WithDisplayPropertiesHOC>
@@ -447,6 +450,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
             value={issue.remaining_hours != null ? Number(issue.remaining_hours) : null}
             onChange={handleRemainingHours}
             disabled={isReadOnly}
+            tooltip={t("common.hours.remaining")}
           />
         </div>
       </WithDisplayPropertiesHOC>
