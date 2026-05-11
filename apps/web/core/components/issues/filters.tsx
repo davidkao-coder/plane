@@ -6,7 +6,7 @@
 
 import { useCallback, useState } from "react";
 import { observer } from "mobx-react";
-import { ChartNoAxesColumn, SlidersHorizontal } from "lucide-react";
+import { ChartNoAxesColumn, FileSpreadsheet, SlidersHorizontal } from "lucide-react";
 // plane imports
 import { EIssueFilterType, ISSUE_STORE_TO_FILTERS_MAP } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -26,6 +26,7 @@ import {
   LayoutSelection,
   MobileLayoutSelection,
 } from "./issue-layouts/filters";
+import { ImportIssuesModal } from "./import-issues-modal";
 
 type Props = {
   currentProjectDetails: TProject | undefined;
@@ -54,6 +55,7 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
   const { t } = useTranslation();
   // states
   const [analyticsModal, setAnalyticsModal] = useState(false);
+  const [importModal, setImportModal] = useState(false);
   // store hooks
   const {
     issuesFilter: { issueFilters, updateFilters },
@@ -88,6 +90,12 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
 
   return (
     <>
+      <ImportIssuesModal
+        isOpen={importModal}
+        onClose={() => setImportModal(false)}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+      />
       <WorkItemsModal
         isOpen={analyticsModal}
         onClose={() => setAnalyticsModal(false)}
@@ -126,12 +134,20 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
         />
       </FiltersDropdown>
       {canUserCreateIssue ? (
-        <Button className="hidden px-2 md:block" onClick={() => setAnalyticsModal(true)} variant="secondary" size="lg">
-          <div className="hidden @4xl:flex">{t("common.analytics")}</div>
-          <div className="flex @4xl:hidden">
-            <ChartNoAxesColumn className="size-3.5" />
-          </div>
-        </Button>
+        <>
+          <Button className="hidden px-2 md:block" onClick={() => setImportModal(true)} variant="neutral-primary" size="lg">
+            <div className="hidden @4xl:flex">{t("issue.import.button")}</div>
+            <div className="flex @4xl:hidden">
+              <FileSpreadsheet className="size-3.5" />
+            </div>
+          </Button>
+          <Button className="hidden px-2 md:block" onClick={() => setAnalyticsModal(true)} variant="secondary" size="lg">
+            <div className="hidden @4xl:flex">{t("common.analytics")}</div>
+            <div className="flex @4xl:hidden">
+              <ChartNoAxesColumn className="size-3.5" />
+            </div>
+          </Button>
+        </>
       ) : (
         <></>
       )}
