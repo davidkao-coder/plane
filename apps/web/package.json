@@ -71,7 +71,6 @@
     "swr": "catalog:",
     "use-font-face-observer": "^1.2.2",
     "uuid": "catalog:",
-    "exceljs": "^4.4.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

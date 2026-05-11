@@ -29,6 +29,7 @@ import {
   type TMappedIssue,
   type TParseResult,
 } from "@/helpers/import-issues.helper";
+import { generateImportTemplate } from "@/helpers/xlsx-template.helper";
 
 type TStep = "select" | "preview" | "importing" | "result";
 
@@ -207,10 +208,7 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
 
   // ─── Download template ────────────────────────────────────────────────────
 
-  const handleDownloadTemplate = async () => {
-    // ExcelJS supports data validation writing (SheetJS community does not)
-    const ExcelJS = await import("exceljs");
-
+  const handleDownloadTemplate = () => {
     // Gather project data for dropdowns
     const states = getProjectStates(projectId) ?? [];
     const memberIds = getProjectMemberIds(projectId, false) ?? [];
@@ -227,94 +225,47 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
     const memberNames = members.map((m) => m.display_name);
     const moduleNames = modules.map((m) => m.name);
 
-    const workbook = new ExcelJS.Workbook();
-
-    // ── Lists sheet (hidden, provides dropdown source values) ─────────────
-    const listsSheet = workbook.addWorksheet("Lists", { state: "hidden" });
-    const maxRows = Math.max(stateNames.length, priorityValues.length, memberNames.length, moduleNames.length, 1);
-    listsSheet.addRow(["狀態", "優先級", "指派成員", "模組"]);
-    for (let i = 0; i < maxRows; i++) {
-      listsSheet.addRow([stateNames[i] ?? "", priorityValues[i] ?? "", memberNames[i] ?? "", moduleNames[i] ?? ""]);
-    }
-
-    // ── Issues sheet ──────────────────────────────────────────────────────
-    const ws = workbook.addWorksheet("Issues");
-    ws.columns = [
-      { header: t("issue.import.column_main") + " *", key: "main", width: 20 },
-      { header: t("issue.import.column_sub"), key: "sub", width: 20 },
-      { header: t("issue.import.column_desc"), key: "desc", width: 24 },
-      { header: t("issue.import.column_state"), key: "state", width: 14 },
-      { header: t("issue.import.column_priority"), key: "priority", width: 12 },
-      { header: t("issue.import.column_assignees"), key: "assignees", width: 22 },
-      { header: t("issue.import.column_labels"), key: "labels", width: 16 },
-      { header: t("issue.import.column_modules"), key: "modules", width: 18 },
-      { header: t("issue.import.column_start_date"), key: "start", width: 14 },
-      { header: t("issue.import.column_due_date"), key: "due", width: 14 },
-      { header: t("issue.import.column_estimate_hours"), key: "estimate", width: 14 },
-      { header: t("issue.import.column_actual_hours"), key: "actual", width: 14 },
-      { header: t("issue.import.column_completed_hours"), key: "completed", width: 16 },
-      { header: t("issue.import.column_remaining_hours"), key: "remaining", width: 14 },
+    const headers = [
+      t("issue.import.column_main") + " *",
+      t("issue.import.column_sub"),
+      t("issue.import.column_desc"),
+      t("issue.import.column_state"),
+      t("issue.import.column_priority"),
+      t("issue.import.column_assignees"),
+      t("issue.import.column_labels"),
+      t("issue.import.column_modules"),
+      t("issue.import.column_start_date"),
+      t("issue.import.column_due_date"),
+      t("issue.import.column_estimate_hours"),
+      t("issue.import.column_actual_hours"),
+      t("issue.import.column_completed_hours"),
+      t("issue.import.column_remaining_hours"),
     ];
 
-    // Example rows
-    ws.addRow(["設計首頁改版", "設計 Hero Banner", "桌機與手機版 RWD", stateNames[0] ?? "進行中", priorityValues[1], memberNames[0] ?? "user@example.com", "設計,前端", moduleNames[0] ?? "前台開發", "2025-06-01", "2025-06-10", 8, "", "", ""]);
-    ws.addRow(["設計首頁改版", "設計 Footer", "", stateNames[0] ?? "待辦", priorityValues[2], "", "設計", moduleNames[0] ?? "前台開發", "", "2025-06-15", 4, "", "", ""]);
-    ws.addRow(["修復登入Bug", "", "點擊登入後白屏", stateNames[0] ?? "待辦", priorityValues[0], memberNames[0] ?? "user@example.com", "後端,Bug", "", "2025-06-01", "2025-06-03", 2, "", "", ""]);
+    const exampleRows = [
+      ["設計首頁改版", "設計 Hero Banner", "桌機與手機版 RWD", stateNames[0] ?? "進行中", priorityValues[1], memberNames[0] ?? "user@example.com", "設計,前端", moduleNames[0] ?? "前台開發", "2025-06-01", "2025-06-10", 8, "", "", ""],
+      ["設計首頁改版", "設計 Footer", "", stateNames[0] ?? "待辦", priorityValues[2], "", "設計", moduleNames[0] ?? "前台開發", "", "2025-06-15", 4, "", "", ""],
+      ["修復登入Bug", "", "點擊登入後白屏", stateNames[0] ?? "待辦", priorityValues[0], memberNames[0] ?? "user@example.com", "後端,Bug", "", "2025-06-01", "2025-06-03", 2, "", "", ""],
+    ];
 
-    // ── Data validations ──────────────────────────────────────────────────
-    // D = State (col 4), E = Priority (col 5), F = Assignees (col 6), H = Modules (col 8)
-    const DATA_ROWS = "2:1000";
-
-    // Priority — fixed inline list
-    ws.dataValidations.add(`E${DATA_ROWS}`, {
-      type: "list",
-      allowBlank: true,
-      formulae: [`"${priorityValues.join(",")}"`],
-      showErrorMessage: false,
+    const bytes = generateImportTemplate({
+      headers,
+      rows: exampleRows,
+      columnWidths: [20, 20, 24, 14, 12, 22, 16, 18, 14, 14, 14, 14, 16, 14],
+      stateNames,
+      priorityValues,
+      memberNames,
+      moduleNames,
     });
 
-    // State — from Lists sheet col A
-    if (stateNames.length > 0) {
-      ws.dataValidations.add(`D${DATA_ROWS}`, {
-        type: "list",
-        allowBlank: true,
-        formulae: [`Lists!$A$2:$A$${stateNames.length + 1}`],
-        showErrorMessage: false,
-      });
-    }
-
-    // Assignees — from Lists sheet col C
-    if (memberNames.length > 0) {
-      ws.dataValidations.add(`F${DATA_ROWS}`, {
-        type: "list",
-        allowBlank: true,
-        formulae: [`Lists!$C$2:$C$${memberNames.length + 1}`],
-        showErrorMessage: false,
-      });
-    }
-
-    // Modules — from Lists sheet col D
-    if (moduleNames.length > 0) {
-      ws.dataValidations.add(`H${DATA_ROWS}`, {
-        type: "list",
-        allowBlank: true,
-        formulae: [`Lists!$D$2:$D$${moduleNames.length + 1}`],
-        showErrorMessage: false,
-      });
-    }
-
-    // ── Write & download ──────────────────────────────────────────────────
     const projectName = getProjectById(projectId)?.name ?? "project";
-    const fileName = `${projectName}-任務匯入範本.xlsx`;
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
+    const blob = new Blob([bytes], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = fileName;
+    a.download = `${projectName}-任務匯入範本.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
