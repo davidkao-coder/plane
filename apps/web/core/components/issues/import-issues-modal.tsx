@@ -20,6 +20,7 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
 import { useModule } from "@/hooks/store/use-module";
+import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 // helpers
 import {
@@ -60,6 +61,7 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // store hooks
+  const { getProjectById } = useProject();
   const { getProjectStates } = useProjectState();
   const { getProjectLabels } = useLabel();
   const { getUserDetails, project: { getProjectMemberIds } } = useMember();
@@ -302,6 +304,9 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
     }
 
     // ── Write & download ──────────────────────────────────────────────────
+    const projectName = getProjectById(projectId)?.name ?? "project";
+    const fileName = `${projectName}-任務匯入範本.xlsx`;
+
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -309,7 +314,7 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "plane_import_template.xlsx";
+    a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
   };
