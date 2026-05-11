@@ -207,7 +207,24 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
 
   const handleDownloadTemplate = async () => {
     const XLSX = await import("xlsx");
+
+    // Gather project data for dropdowns
+    const states = getProjectStates(projectId) ?? [];
+    const memberIds = getProjectMemberIds(projectId, false) ?? [];
+    const members: IUserLite[] = memberIds
+      .map((id) => getUserDetails(id))
+      .filter((m): m is IUserLite => m != null);
+    const moduleIds = getProjectModuleIds(projectId) ?? [];
+    const modules = moduleIds.map((id) => getModuleById(id)).filter((m): m is NonNullable<typeof m> => m != null);
+
+    const stateNames = states.map((s) => s.name);
+    const priorityValues = ["緊急", "高", "中", "低", "無"];
+    const memberNames = members.map((m) => m.display_name);
+    const moduleNames = modules.map((m) => m.name);
+
     const wb = XLSX.utils.book_new();
+
+    // ── Issues sheet ──────────────────────────────────────────────────────
     const headers = [
       t("issue.import.column_main") + " *",
       t("issue.import.column_sub"),
@@ -225,13 +242,66 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
       t("issue.import.column_remaining_hours"),
     ];
     const exampleRows = [
-      ["設計首頁改版", "設計 Hero Banner", "桌機與手機版 RWD", "進行中", "高", "user@example.com", "設計,前端", "前台開發", "2025-06-01", "2025-06-10", 8, "", "", ""],
-      ["設計首頁改版", "設計 Footer", "", "待辦", "中", "", "設計", "前台開發", "", "2025-06-15", 4, "", "", ""],
-      ["修復登入Bug", "", "點擊登入後白屏", "待辦", "緊急", "user@example.com", "後端,Bug", "", "2025-06-01", "2025-06-03", 2, "", "", ""],
+      ["設計首頁改版", "設計 Hero Banner", "桌機與手機版 RWD", stateNames[0] ?? "進行中", priorityValues[1], memberNames[0] ?? "user@example.com", "設計,前端", moduleNames[0] ?? "前台開發", "2025-06-01", "2025-06-10", 8, "", "", ""],
+      ["設計首頁改版", "設計 Footer", "", stateNames[0] ?? "待辦", priorityValues[2], "", "設計", moduleNames[0] ?? "前台開發", "", "2025-06-15", 4, "", "", ""],
+      ["修復登入Bug", "", "點擊登入後白屏", stateNames[0] ?? "待辦", priorityValues[0], memberNames[0] ?? "user@example.com", "後端,Bug", "", "2025-06-01", "2025-06-03", 2, "", "", ""],
     ];
     const ws = XLSX.utils.aoa_to_sheet([headers, ...exampleRows]);
     ws["!cols"] = headers.map(() => ({ wch: 18 }));
+
+    // Data validations — col D=State, E=Priority, F=Assignees, H=Modules
+    // For priority we use an inline list; for dynamic data we reference the Lists sheet
+    const validations: object[] = [
+      {
+        type: "list",
+        sqref: "E2:E1000",
+        formula1: `"${priorityValues.join(",")}"`,
+        showDropDown: false,
+      },
+    ];
+    if (stateNames.length > 0) {
+      validations.push({
+        type: "list",
+        sqref: "D2:D1000",
+        formula1: `Lists!$A$2:$A$${stateNames.length + 1}`,
+        showDropDown: false,
+      });
+    }
+    if (memberNames.length > 0) {
+      validations.push({
+        type: "list",
+        sqref: "F2:F1000",
+        formula1: `Lists!$B$2:$B$${memberNames.length + 1}`,
+        showDropDown: false,
+      });
+    }
+    if (moduleNames.length > 0) {
+      validations.push({
+        type: "list",
+        sqref: "H2:H1000",
+        formula1: `Lists!$C$2:$C$${moduleNames.length + 1}`,
+        showDropDown: false,
+      });
+    }
+    (ws as Record<string, unknown>)["!dataValidations"] = validations;
+
     XLSX.utils.book_append_sheet(wb, ws, "Issues");
+
+    // ── Lists sheet (hidden — provides dropdown source data) ──────────────
+    const maxRows = Math.max(stateNames.length, memberNames.length, moduleNames.length, 1);
+    const listsData: (string | number)[][] = [["狀態", "指派成員", "模組"]];
+    for (let i = 0; i < maxRows; i++) {
+      listsData.push([stateNames[i] ?? "", memberNames[i] ?? "", moduleNames[i] ?? ""]);
+    }
+    const listsWs = XLSX.utils.aoa_to_sheet(listsData);
+    XLSX.utils.book_append_sheet(wb, listsWs, "Lists");
+
+    // Hide the Lists sheet (index 1)
+    if (!wb.Workbook) (wb as Record<string, unknown>).Workbook = {};
+    const wbObj = wb.Workbook as Record<string, unknown>;
+    if (!wbObj.Sheets) wbObj.Sheets = [];
+    (wbObj.Sheets as Record<string, unknown>[])[1] = { Hidden: 1 };
+
     XLSX.writeFile(wb, "plane_import_template.xlsx");
   };
 
