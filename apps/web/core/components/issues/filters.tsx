@@ -6,7 +6,7 @@
 
 import { useCallback, useState } from "react";
 import { observer } from "mobx-react";
-import { ChartNoAxesColumn, FileSpreadsheet, SlidersHorizontal } from "lucide-react";
+import { BarChart2, ChartNoAxesColumn, FileSpreadsheet, SlidersHorizontal } from "lucide-react";
 // plane imports
 import { EIssueFilterType, ISSUE_STORE_TO_FILTERS_MAP } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -26,6 +26,7 @@ import {
   LayoutSelection,
   MobileLayoutSelection,
 } from "./issue-layouts/filters";
+import { ExportReportModal } from "../project/export-report-modal";
 import { ImportIssuesModal } from "./import-issues-modal";
 
 type Props = {
@@ -56,6 +57,7 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
   // states
   const [analyticsModal, setAnalyticsModal] = useState(false);
   const [importModal, setImportModal] = useState(false);
+  const [exportModal, setExportModal] = useState(false);
   // store hooks
   const {
     issuesFilter: { issueFilters, updateFilters },
@@ -93,6 +95,12 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
       <ImportIssuesModal
         isOpen={importModal}
         onClose={() => setImportModal(false)}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+      />
+      <ExportReportModal
+        isOpen={exportModal}
+        onClose={() => setExportModal(false)}
         workspaceSlug={workspaceSlug}
         projectId={projectId}
       />
@@ -139,6 +147,12 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
             <div className="hidden @4xl:flex">{t("issue.import.button")}</div>
             <div className="flex @4xl:hidden">
               <FileSpreadsheet className="size-3.5" />
+            </div>
+          </Button>
+          <Button className="hidden px-2 md:block" onClick={() => setExportModal(true)} variant="neutral-primary" size="lg">
+            <div className="hidden @4xl:flex">{t("issue.export.button")}</div>
+            <div className="flex @4xl:hidden">
+              <BarChart2 className="size-3.5" />
             </div>
           </Button>
           <Button className="hidden px-2 md:block" onClick={() => setAnalyticsModal(true)} variant="secondary" size="lg">
