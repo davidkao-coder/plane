@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { IIssueLabel, IState, IUserLite, TIssuePriorities } from "@plane/types";
+import type { IIssueLabel, IModule, IState, IUserLite, TIssuePriorities } from "@plane/types";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,7 @@ export type TParsedIssueRow = {
   priorityRaw: string;
   assigneeRaw: string[];
   labelRaw: string[];
+  moduleRaw: string[];
   startDate: string | null;
   dueDate: string | null;
   estimateHours: number | null;
@@ -46,6 +47,7 @@ export type TMappedIssue = {
   priority: TIssuePriorities;
   assignee_ids: string[];
   label_ids: string[];
+  module_ids: string[];
   start_date: string | null;
   target_date: string | null;
   estimate_hours: number | null;
@@ -142,6 +144,7 @@ export const IMPORT_COLUMNS = {
   PRIORITY: "優先級",
   ASSIGNEES: "指派成員",
   LABELS: "標籤",
+  MODULES: "模組",
   START: "開始日期",
   DUE: "截止日期",
   ESTIMATE: "預計工時",
@@ -209,6 +212,7 @@ export async function parseExcelBuffer(buffer: ArrayBuffer): Promise<{
       priorityRaw: cellStr(row[IMPORT_COLUMNS.PRIORITY]),
       assigneeRaw: splitComma(row[IMPORT_COLUMNS.ASSIGNEES]),
       labelRaw: splitComma(row[IMPORT_COLUMNS.LABELS]),
+      moduleRaw: splitComma(row[IMPORT_COLUMNS.MODULES]),
       startDate: parseDate(rawRow[IMPORT_COLUMNS.START] ?? row[IMPORT_COLUMNS.START]),
       dueDate: parseDate(rawRow[IMPORT_COLUMNS.DUE] ?? row[IMPORT_COLUMNS.DUE]),
       estimateHours: parseNumber(rawRow[IMPORT_COLUMNS.ESTIMATE] ?? row[IMPORT_COLUMNS.ESTIMATE]),
@@ -227,7 +231,8 @@ export function mapRowsToIssues(
   rows: TParsedIssueRow[],
   states: IState[],
   labels: IIssueLabel[],
-  members: IUserLite[]
+  members: IUserLite[],
+  modules: IModule[]
 ): TParseResult {
   const warnings: TImportWarning[] = [];
   const errors: TImportError[] = [];
@@ -239,6 +244,9 @@ export function mapRowsToIssues(
 
   const labelByName = new Map<string, IIssueLabel>();
   labels.forEach((l) => labelByName.set(l.name.toLowerCase().trim(), l));
+
+  const moduleByName = new Map<string, IModule>();
+  modules.forEach((m) => moduleByName.set(m.name.toLowerCase().trim(), m));
 
   const memberByEmail = new Map<string, IUserLite>();
   const memberByName = new Map<string, IUserLite>();
@@ -300,12 +308,16 @@ export function mapRowsToIssues(
       }
     });
 
-    // Dates
-    let startDate = r.startDate;
-    let dueDate = r.dueDate;
-    if (r.stateName && !startDate && r.startDate === null && r.priorityRaw) {
-      // already null — OK
-    }
+    // Modules
+    const moduleIds: string[] = [];
+    r.moduleRaw.forEach((raw) => {
+      const found = moduleByName.get(raw.toLowerCase().trim());
+      if (found) {
+        moduleIds.push(found.id);
+      } else {
+        warnings.push({ row: r.rowIndex, field: "module", message: `warning_module:${raw}` });
+      }
+    });
 
     return {
       rowIndex: r.rowIndex,
@@ -315,8 +327,9 @@ export function mapRowsToIssues(
       priority,
       assignee_ids: assigneeIds,
       label_ids: labelIds,
-      start_date: startDate,
-      target_date: dueDate,
+      module_ids: moduleIds,
+      start_date: r.startDate,
+      target_date: r.dueDate,
       estimate_hours: r.estimateHours,
       actual_hours: r.actualHours,
       completed_hours: r.completedHours,
@@ -326,6 +339,7 @@ export function mapRowsToIssues(
       parentName: r.mainTask,
     };
   }
+
 
   const parents: TMappedIssue[] = [];
   const children: TMappedIssue[] = [];

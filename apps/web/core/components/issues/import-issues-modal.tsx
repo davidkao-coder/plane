@@ -19,6 +19,7 @@ import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
+import { useModule } from "@/hooks/store/use-module";
 import { useProjectState } from "@/hooks/store/use-project-state";
 // helpers
 import {
@@ -62,6 +63,7 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
   const { getProjectStates } = useProjectState();
   const { getProjectLabels } = useLabel();
   const { getUserDetails, project: { getProjectMemberIds } } = useMember();
+  const { getProjectModuleIds, getModuleById } = useModule();
   const { issues: projectIssues } = useIssues(EIssuesStoreType.PROJECT);
 
   const handleClose = () => {
@@ -99,8 +101,10 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
       const members: IUserLite[] = memberIds
         .map((id) => getUserDetails(id))
         .filter((m): m is IUserLite => m != null);
+      const moduleIds = getProjectModuleIds(projectId) ?? [];
+      const modules = moduleIds.map((id) => getModuleById(id)).filter((m): m is NonNullable<typeof m> => m != null);
 
-      const result = mapRowsToIssues(rows, states, labels, members);
+      const result = mapRowsToIssues(rows, states, labels, members, modules);
 
       // Merge parse errors into result errors
       const allErrors = [...result.errors, ...parseErrors];
@@ -158,6 +162,10 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
           parent_id: parentId ?? null,
         };
         const created = await projectIssues.createIssue(workspaceSlug, projectId, payload);
+        // Add to modules (modules require a separate API call after issue creation)
+        if (created?.id && issue.module_ids.length > 0) {
+          await projectIssues.changeModulesInIssue(workspaceSlug, projectId, created.id, issue.module_ids, []);
+        }
         result.success++;
         return created?.id as string | undefined;
       } catch {
@@ -208,6 +216,7 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
       t("issue.import.column_priority"),
       t("issue.import.column_assignees"),
       t("issue.import.column_labels"),
+      t("issue.import.column_modules"),
       t("issue.import.column_start_date"),
       t("issue.import.column_due_date"),
       t("issue.import.column_estimate_hours"),
@@ -216,9 +225,9 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
       t("issue.import.column_remaining_hours"),
     ];
     const exampleRows = [
-      ["設計首頁改版", "設計 Hero Banner", "桌機與手機版 RWD", "進行中", "高", "user@example.com", "設計,前端", "2025-06-01", "2025-06-10", 8, "", "", ""],
-      ["設計首頁改版", "設計 Footer", "", "待辦", "中", "", "設計", "", "2025-06-15", 4, "", "", ""],
-      ["修復登入Bug", "", "點擊登入後白屏", "待辦", "緊急", "user@example.com", "後端,Bug", "2025-06-01", "2025-06-03", 2, "", "", ""],
+      ["設計首頁改版", "設計 Hero Banner", "桌機與手機版 RWD", "進行中", "高", "user@example.com", "設計,前端", "前台開發", "2025-06-01", "2025-06-10", 8, "", "", ""],
+      ["設計首頁改版", "設計 Footer", "", "待辦", "中", "", "設計", "前台開發", "", "2025-06-15", 4, "", "", ""],
+      ["修復登入Bug", "", "點擊登入後白屏", "待辦", "緊急", "user@example.com", "後端,Bug", "", "2025-06-01", "2025-06-03", 2, "", "", ""],
     ];
     const ws = XLSX.utils.aoa_to_sheet([headers, ...exampleRows]);
     ws["!cols"] = headers.map(() => ({ wch: 18 }));

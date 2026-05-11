@@ -996,6 +996,7 @@ export default {
       column_actual_hours: "實際工時",
       column_completed_hours: "已完成工時",
       column_remaining_hours: "剩餘工時",
+      column_modules: "模組",
       download_template: "下載範本",
     },
     label: "{count, plural, one {工作事項} other {工作事項}}",

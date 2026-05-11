@@ -847,6 +847,7 @@ export default {
       column_actual_hours: "Actual Hours",
       column_completed_hours: "Completed Hours",
       column_remaining_hours: "Remaining Hours",
+      column_modules: "Modules",
       download_template: "Download Template",
     },
     label: "{count, plural, one {Work item} other {Work items}}",
