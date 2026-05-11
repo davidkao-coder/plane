@@ -60,16 +60,19 @@ export const ExportReportModal = observer(function ExportReportModal(props: Prop
 
     const load = async () => {
       try {
-        // Fetch ALL issues directly from API (bypass store pagination)
-        const response = await issueService.getIssues(workspaceSlug, projectId, {
-          per_page: "9999",
-        } as any);
+        // Fetch ALL issues using getIssuesWithParams (simpler, no pagination wrapper)
+        // Returns TIssue[] or { [group]: TIssue[] }
+        const raw = await issueService.getIssuesWithParams(workspaceSlug, projectId, {
+          per_page: 9999,
+          order_by: "-created_at",
+        });
 
         if (cancelled) return;
 
-        const issues = (Array.isArray(response?.results)
-          ? response.results
-          : Object.values(response?.results ?? {})) as TIssue[];
+        // Flatten grouped or flat response into TIssue[]
+        const issues = (Array.isArray(raw)
+          ? raw
+          : Object.values(raw ?? {}).flat()) as TIssue[];
 
         const states = getProjectStates(projectId) ?? [];
         const memberIds = getProjectMemberIds(projectId, false) ?? [];
@@ -84,9 +87,17 @@ export const ExportReportModal = observer(function ExportReportModal(props: Prop
         const computed = computeProjectStats(issues, states, members, modules);
         setStats(computed);
         setStep("preview");
-      } catch (err) {
+      } catch (err: unknown) {
         if (!cancelled) {
-          setErrorMsg(String(err));
+          // Extract human-readable message from Plane API error objects
+          const msg =
+            typeof err === "string"
+              ? err
+              : (err as Record<string, unknown>)?.detail as string
+                ?? (err as Record<string, unknown>)?.error as string
+                ?? (err instanceof Error ? err.message : null)
+                ?? JSON.stringify(err);
+          setErrorMsg(msg ?? "Unknown error");
           setStep("error");
         }
       }
