@@ -206,7 +206,8 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
   // ─── Download template ────────────────────────────────────────────────────
 
   const handleDownloadTemplate = async () => {
-    const XLSX = await import("xlsx");
+    // ExcelJS supports data validation writing (SheetJS community does not)
+    const ExcelJS = await import("exceljs");
 
     // Gather project data for dropdowns
     const states = getProjectStates(projectId) ?? [];
@@ -215,94 +216,102 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
       .map((id) => getUserDetails(id))
       .filter((m): m is IUserLite => m != null);
     const moduleIds = getProjectModuleIds(projectId) ?? [];
-    const modules = moduleIds.map((id) => getModuleById(id)).filter((m): m is NonNullable<typeof m> => m != null);
+    const modules = moduleIds
+      .map((id) => getModuleById(id))
+      .filter((m): m is NonNullable<typeof m> => m != null);
 
     const stateNames = states.map((s) => s.name);
     const priorityValues = ["緊急", "高", "中", "低", "無"];
     const memberNames = members.map((m) => m.display_name);
     const moduleNames = modules.map((m) => m.name);
 
-    const wb = XLSX.utils.book_new();
+    const workbook = new ExcelJS.Workbook();
+
+    // ── Lists sheet (hidden, provides dropdown source values) ─────────────
+    const listsSheet = workbook.addWorksheet("Lists", { state: "hidden" });
+    const maxRows = Math.max(stateNames.length, priorityValues.length, memberNames.length, moduleNames.length, 1);
+    listsSheet.addRow(["狀態", "優先級", "指派成員", "模組"]);
+    for (let i = 0; i < maxRows; i++) {
+      listsSheet.addRow([stateNames[i] ?? "", priorityValues[i] ?? "", memberNames[i] ?? "", moduleNames[i] ?? ""]);
+    }
 
     // ── Issues sheet ──────────────────────────────────────────────────────
-    const headers = [
-      t("issue.import.column_main") + " *",
-      t("issue.import.column_sub"),
-      t("issue.import.column_desc"),
-      t("issue.import.column_state"),
-      t("issue.import.column_priority"),
-      t("issue.import.column_assignees"),
-      t("issue.import.column_labels"),
-      t("issue.import.column_modules"),
-      t("issue.import.column_start_date"),
-      t("issue.import.column_due_date"),
-      t("issue.import.column_estimate_hours"),
-      t("issue.import.column_actual_hours"),
-      t("issue.import.column_completed_hours"),
-      t("issue.import.column_remaining_hours"),
+    const ws = workbook.addWorksheet("Issues");
+    ws.columns = [
+      { header: t("issue.import.column_main") + " *", key: "main", width: 20 },
+      { header: t("issue.import.column_sub"), key: "sub", width: 20 },
+      { header: t("issue.import.column_desc"), key: "desc", width: 24 },
+      { header: t("issue.import.column_state"), key: "state", width: 14 },
+      { header: t("issue.import.column_priority"), key: "priority", width: 12 },
+      { header: t("issue.import.column_assignees"), key: "assignees", width: 22 },
+      { header: t("issue.import.column_labels"), key: "labels", width: 16 },
+      { header: t("issue.import.column_modules"), key: "modules", width: 18 },
+      { header: t("issue.import.column_start_date"), key: "start", width: 14 },
+      { header: t("issue.import.column_due_date"), key: "due", width: 14 },
+      { header: t("issue.import.column_estimate_hours"), key: "estimate", width: 14 },
+      { header: t("issue.import.column_actual_hours"), key: "actual", width: 14 },
+      { header: t("issue.import.column_completed_hours"), key: "completed", width: 16 },
+      { header: t("issue.import.column_remaining_hours"), key: "remaining", width: 14 },
     ];
-    const exampleRows = [
-      ["設計首頁改版", "設計 Hero Banner", "桌機與手機版 RWD", stateNames[0] ?? "進行中", priorityValues[1], memberNames[0] ?? "user@example.com", "設計,前端", moduleNames[0] ?? "前台開發", "2025-06-01", "2025-06-10", 8, "", "", ""],
-      ["設計首頁改版", "設計 Footer", "", stateNames[0] ?? "待辦", priorityValues[2], "", "設計", moduleNames[0] ?? "前台開發", "", "2025-06-15", 4, "", "", ""],
-      ["修復登入Bug", "", "點擊登入後白屏", stateNames[0] ?? "待辦", priorityValues[0], memberNames[0] ?? "user@example.com", "後端,Bug", "", "2025-06-01", "2025-06-03", 2, "", "", ""],
-    ];
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...exampleRows]);
-    ws["!cols"] = headers.map(() => ({ wch: 18 }));
 
-    // Data validations — col D=State, E=Priority, F=Assignees, H=Modules
-    // For priority we use an inline list; for dynamic data we reference the Lists sheet
-    const validations: object[] = [
-      {
-        type: "list",
-        sqref: "E2:E1000",
-        formula1: `"${priorityValues.join(",")}"`,
-        showDropDown: false,
-      },
-    ];
+    // Example rows
+    ws.addRow(["設計首頁改版", "設計 Hero Banner", "桌機與手機版 RWD", stateNames[0] ?? "進行中", priorityValues[1], memberNames[0] ?? "user@example.com", "設計,前端", moduleNames[0] ?? "前台開發", "2025-06-01", "2025-06-10", 8, "", "", ""]);
+    ws.addRow(["設計首頁改版", "設計 Footer", "", stateNames[0] ?? "待辦", priorityValues[2], "", "設計", moduleNames[0] ?? "前台開發", "", "2025-06-15", 4, "", "", ""]);
+    ws.addRow(["修復登入Bug", "", "點擊登入後白屏", stateNames[0] ?? "待辦", priorityValues[0], memberNames[0] ?? "user@example.com", "後端,Bug", "", "2025-06-01", "2025-06-03", 2, "", "", ""]);
+
+    // ── Data validations ──────────────────────────────────────────────────
+    // D = State (col 4), E = Priority (col 5), F = Assignees (col 6), H = Modules (col 8)
+    const DATA_ROWS = "2:1000";
+
+    // Priority — fixed inline list
+    ws.dataValidations.add(`E${DATA_ROWS}`, {
+      type: "list",
+      allowBlank: true,
+      formulae: [`"${priorityValues.join(",")}"`],
+      showErrorMessage: false,
+    });
+
+    // State — from Lists sheet col A
     if (stateNames.length > 0) {
-      validations.push({
+      ws.dataValidations.add(`D${DATA_ROWS}`, {
         type: "list",
-        sqref: "D2:D1000",
-        formula1: `Lists!$A$2:$A$${stateNames.length + 1}`,
-        showDropDown: false,
+        allowBlank: true,
+        formulae: [`Lists!$A$2:$A$${stateNames.length + 1}`],
+        showErrorMessage: false,
       });
     }
+
+    // Assignees — from Lists sheet col C
     if (memberNames.length > 0) {
-      validations.push({
+      ws.dataValidations.add(`F${DATA_ROWS}`, {
         type: "list",
-        sqref: "F2:F1000",
-        formula1: `Lists!$B$2:$B$${memberNames.length + 1}`,
-        showDropDown: false,
+        allowBlank: true,
+        formulae: [`Lists!$C$2:$C$${memberNames.length + 1}`],
+        showErrorMessage: false,
       });
     }
+
+    // Modules — from Lists sheet col D
     if (moduleNames.length > 0) {
-      validations.push({
+      ws.dataValidations.add(`H${DATA_ROWS}`, {
         type: "list",
-        sqref: "H2:H1000",
-        formula1: `Lists!$C$2:$C$${moduleNames.length + 1}`,
-        showDropDown: false,
+        allowBlank: true,
+        formulae: [`Lists!$D$2:$D$${moduleNames.length + 1}`],
+        showErrorMessage: false,
       });
     }
-    (ws as Record<string, unknown>)["!dataValidations"] = validations;
 
-    XLSX.utils.book_append_sheet(wb, ws, "Issues");
-
-    // ── Lists sheet (hidden — provides dropdown source data) ──────────────
-    const maxRows = Math.max(stateNames.length, memberNames.length, moduleNames.length, 1);
-    const listsData: (string | number)[][] = [["狀態", "指派成員", "模組"]];
-    for (let i = 0; i < maxRows; i++) {
-      listsData.push([stateNames[i] ?? "", memberNames[i] ?? "", moduleNames[i] ?? ""]);
-    }
-    const listsWs = XLSX.utils.aoa_to_sheet(listsData);
-    XLSX.utils.book_append_sheet(wb, listsWs, "Lists");
-
-    // Hide the Lists sheet (index 1)
-    if (!wb.Workbook) (wb as Record<string, unknown>).Workbook = {};
-    const wbObj = wb.Workbook as Record<string, unknown>;
-    if (!wbObj.Sheets) wbObj.Sheets = [];
-    (wbObj.Sheets as Record<string, unknown>[])[1] = { Hidden: 1 };
-
-    XLSX.writeFile(wb, "plane_import_template.xlsx");
+    // ── Write & download ──────────────────────────────────────────────────
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "plane_import_template.xlsx";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // ─── UI ───────────────────────────────────────────────────────────────────
