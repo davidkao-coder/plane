@@ -60,19 +60,30 @@ export const ExportReportModal = observer(function ExportReportModal(props: Prop
 
     const load = async () => {
       try {
-        // Fetch ALL issues using getIssuesWithParams (simpler, no pagination wrapper)
-        // Returns TIssue[] or { [group]: TIssue[] }
-        const raw = await issueService.getIssuesWithParams(workspaceSlug, projectId, {
-          per_page: 9999,
-          order_by: "-created_at",
-        });
-
-        if (cancelled) return;
-
-        // Flatten grouped or flat response into TIssue[]
-        const issues = (Array.isArray(raw)
-          ? raw
-          : Object.values(raw ?? {}).flat()) as TIssue[];
+        // Fetch ALL issues using paginated getIssues (max per_page = 1000)
+        const issues: TIssue[] = [];
+        let cursor: string | undefined;
+        do {
+          const params: Record<string, string | number> = { per_page: 1000, order_by: "-created_at" };
+          if (cursor) params["cursor"] = cursor;
+          const page = await issueService.getIssues(workspaceSlug, projectId, params);
+          if (cancelled) return;
+          const flattenResults = (r: unknown): TIssue[] => {
+            if (Array.isArray(r)) return r as TIssue[];
+            if (r && typeof r === "object") {
+              return Object.values(r as Record<string, unknown>).flatMap((v) => {
+                if (Array.isArray(v)) return v as TIssue[];
+                if (v && typeof v === "object" && "results" in (v as object))
+                  return flattenResults((v as { results: unknown }).results);
+                return [];
+              });
+            }
+            return [];
+          };
+          const pageIssues = flattenResults(page.results);
+          issues.push(...pageIssues);
+          cursor = page.next_page_results ? page.next_cursor : undefined;
+        } while (cursor);
 
         const states = getProjectStates(projectId) ?? [];
         const memberIds = getProjectMemberIds(projectId, false) ?? [];
