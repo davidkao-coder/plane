@@ -17,6 +17,8 @@ export type TImportWarning = {
 export type TImportError = {
   row: number;
   message: string;
+  /** Optional template-args for the i18n message (e.g. `{ fields: "..." }`). */
+  meta?: Record<string, string | number>;
 };
 
 export type TParsedIssueRow = {
@@ -210,6 +212,10 @@ export async function parseExcelBuffer(buffer: ArrayBuffer): Promise<{
     const rowIndex = idx + 2; // header is row 1
     const rawRow = rawRowsRaw[idx] ?? {};
 
+    // Skip completely empty rows silently.
+    const anyValue = Object.values(row).some((v) => v !== "" && v != null);
+    if (!anyValue) return;
+
     const mainTask = cellStr(row[IMPORT_COLUMNS.MAIN]);
     if (!mainTask) {
       parseErrors.push({ row: rowIndex, message: "error_no_title" });
@@ -219,23 +225,63 @@ export async function parseExcelBuffer(buffer: ArrayBuffer): Promise<{
     const subTask = cellStr(row[IMPORT_COLUMNS.SUB]);
     const name = subTask ? `${mainTask} - ${subTask}` : mainTask;
 
+    // Extract all other field values
+    const description = cellStr(row[IMPORT_COLUMNS.DESC]);
+    const stateName = cellStr(row[IMPORT_COLUMNS.STATE]);
+    const priorityRaw = cellStr(row[IMPORT_COLUMNS.PRIORITY]);
+    const assigneeRaw = splitComma(row[IMPORT_COLUMNS.ASSIGNEES]);
+    const labelRaw = splitComma(row[IMPORT_COLUMNS.LABELS]);
+    const moduleRaw = splitComma(row[IMPORT_COLUMNS.MODULES]);
+    const startDate = parseDate(rawRow[IMPORT_COLUMNS.START] ?? row[IMPORT_COLUMNS.START]);
+    const dueDate = parseDate(rawRow[IMPORT_COLUMNS.DUE] ?? row[IMPORT_COLUMNS.DUE]);
+    const estimateHours = parseNumber(rawRow[IMPORT_COLUMNS.ESTIMATE] ?? row[IMPORT_COLUMNS.ESTIMATE]);
+    const actualHours = parseNumber(rawRow[IMPORT_COLUMNS.ACTUAL] ?? row[IMPORT_COLUMNS.ACTUAL]);
+    const completedHours = parseNumber(rawRow[IMPORT_COLUMNS.COMPLETED] ?? row[IMPORT_COLUMNS.COMPLETED]);
+    const remainingHours = parseNumber(rawRow[IMPORT_COLUMNS.REMAINING] ?? row[IMPORT_COLUMNS.REMAINING]);
+
+    // Validate all required fields (everything except 子任務 is required).
+    // 0 is considered a valid value for hours fields.
+    const missing: string[] = [];
+    if (!description) missing.push(IMPORT_COLUMNS.DESC);
+    if (!stateName) missing.push(IMPORT_COLUMNS.STATE);
+    if (!priorityRaw) missing.push(IMPORT_COLUMNS.PRIORITY);
+    if (assigneeRaw.length === 0) missing.push(IMPORT_COLUMNS.ASSIGNEES);
+    if (labelRaw.length === 0) missing.push(IMPORT_COLUMNS.LABELS);
+    if (moduleRaw.length === 0) missing.push(IMPORT_COLUMNS.MODULES);
+    if (!startDate) missing.push(IMPORT_COLUMNS.START);
+    if (!dueDate) missing.push(IMPORT_COLUMNS.DUE);
+    if (estimateHours == null) missing.push(IMPORT_COLUMNS.ESTIMATE);
+    if (actualHours == null) missing.push(IMPORT_COLUMNS.ACTUAL);
+    if (completedHours == null) missing.push(IMPORT_COLUMNS.COMPLETED);
+    if (remainingHours == null) missing.push(IMPORT_COLUMNS.REMAINING);
+
+    if (missing.length > 0) {
+      parseErrors.push({
+        row: rowIndex,
+        message: "error_missing_fields",
+        // attached so the UI can render the missing field list
+        meta: { fields: missing.join("、") },
+      });
+      return;
+    }
+
     rows.push({
       rowIndex,
       mainTask,
       subTask,
       name,
-      description: cellStr(row[IMPORT_COLUMNS.DESC]),
-      stateName: cellStr(row[IMPORT_COLUMNS.STATE]),
-      priorityRaw: cellStr(row[IMPORT_COLUMNS.PRIORITY]),
-      assigneeRaw: splitComma(row[IMPORT_COLUMNS.ASSIGNEES]),
-      labelRaw: splitComma(row[IMPORT_COLUMNS.LABELS]),
-      moduleRaw: splitComma(row[IMPORT_COLUMNS.MODULES]),
-      startDate: parseDate(rawRow[IMPORT_COLUMNS.START] ?? row[IMPORT_COLUMNS.START]),
-      dueDate: parseDate(rawRow[IMPORT_COLUMNS.DUE] ?? row[IMPORT_COLUMNS.DUE]),
-      estimateHours: parseNumber(rawRow[IMPORT_COLUMNS.ESTIMATE] ?? row[IMPORT_COLUMNS.ESTIMATE]),
-      actualHours: parseNumber(rawRow[IMPORT_COLUMNS.ACTUAL] ?? row[IMPORT_COLUMNS.ACTUAL]),
-      completedHours: parseNumber(rawRow[IMPORT_COLUMNS.COMPLETED] ?? row[IMPORT_COLUMNS.COMPLETED]),
-      remainingHours: parseNumber(rawRow[IMPORT_COLUMNS.REMAINING] ?? row[IMPORT_COLUMNS.REMAINING]),
+      description,
+      stateName,
+      priorityRaw,
+      assigneeRaw,
+      labelRaw,
+      moduleRaw,
+      startDate,
+      dueDate,
+      estimateHours,
+      actualHours,
+      completedHours,
+      remainingHours,
     });
   });
 

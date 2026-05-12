@@ -225,21 +225,22 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
     const memberNames = members.map((m) => m.display_name);
     const moduleNames = modules.map((m) => m.name);
 
+    // All columns except 子任務 are required – mark with " *" in the header.
     const headers = [
       t("issue.import.column_main") + " *",
       t("issue.import.column_sub"),
-      t("issue.import.column_desc"),
-      t("issue.import.column_state"),
-      t("issue.import.column_priority"),
-      t("issue.import.column_assignees"),
-      t("issue.import.column_labels"),
-      t("issue.import.column_modules"),
-      t("issue.import.column_start_date"),
-      t("issue.import.column_due_date"),
-      t("issue.import.column_estimate_hours"),
-      t("issue.import.column_actual_hours"),
-      t("issue.import.column_completed_hours"),
-      t("issue.import.column_remaining_hours"),
+      t("issue.import.column_desc") + " *",
+      t("issue.import.column_state") + " *",
+      t("issue.import.column_priority") + " *",
+      t("issue.import.column_assignees") + " *",
+      t("issue.import.column_labels") + " *",
+      t("issue.import.column_modules") + " *",
+      t("issue.import.column_start_date") + " *",
+      t("issue.import.column_due_date") + " *",
+      t("issue.import.column_estimate_hours") + " *",
+      t("issue.import.column_actual_hours") + " *",
+      t("issue.import.column_completed_hours") + " *",
+      t("issue.import.column_remaining_hours") + " *",
     ];
 
     const exampleRows = [
@@ -438,9 +439,11 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
                   <p className="text-xs font-medium text-red-500 mb-1">
                     {t("issue.import.result_failed", { count: parseResult.errors.length })}
                   </p>
-                  <ul className="space-y-0.5 max-h-24 overflow-y-auto">
+                  <ul className="space-y-0.5 max-h-40 overflow-y-auto">
                     {parseResult.errors.slice(0, 10).map((e, i) => (
-                      <li key={i} className="text-xs text-red-500/80">• Row {e.row}: {e.message}</li>
+                      <li key={i} className="text-xs text-red-500/80">
+                        • {t(`issue.import.${e.message}` as any, { row: e.row, ...(e.meta ?? {}) })}
+                      </li>
                     ))}
                   </ul>
                 </div>

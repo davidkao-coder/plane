@@ -1014,6 +1014,7 @@ export default {
       warning_label: "第 {row} 列：找不到標籤「{value}」，已跳過",
       warning_date: "第 {row} 列：欄位「{col}」的日期格式不正確「{value}」，已跳過",
       error_no_title: "第 {row} 列：主任務標題為空，已跳過",
+      error_missing_fields: "第 {row} 列：以下必填欄位為空：{fields}，已跳過",
       error_no_sheet: "找不到名為「Issues」的 Sheet",
       error_file: "無法讀取檔案，請確認格式是否正確",
       column_main: "主任務",

@@ -864,6 +864,7 @@ export default {
       warning_member: "Row {row}: Member \"{value}\" not found, skipped",
       warning_label: "Row {row}: Label \"{value}\" not found, skipped",
       warning_date: "Row {row}: Invalid date \"{value}\" in column \"{col}\", skipped",
+      error_missing_fields: "Row {row}: missing required fields: {fields}, skipped",
       error_no_title: "Row {row}: Main task title is empty, skipped",
       error_no_sheet: "Sheet named \"Issues\" not found in the file",
       error_file: "Failed to read the file. Please check the file format.",
