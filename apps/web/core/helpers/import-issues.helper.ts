@@ -239,8 +239,8 @@ export async function parseExcelBuffer(buffer: ArrayBuffer): Promise<{
     const completedHours = parseNumber(rawRow[IMPORT_COLUMNS.COMPLETED] ?? row[IMPORT_COLUMNS.COMPLETED]);
     const remainingHours = parseNumber(rawRow[IMPORT_COLUMNS.REMAINING] ?? row[IMPORT_COLUMNS.REMAINING]);
 
-    // Validate all required fields (everything except 子任務 is required).
-    // 0 is considered a valid value for hours fields.
+    // Required = everything except 子任務 and the actual/completed/remaining
+    // hours columns (which auto-default to 0 when blank).
     const missing: string[] = [];
     if (!description) missing.push(IMPORT_COLUMNS.DESC);
     if (!stateName) missing.push(IMPORT_COLUMNS.STATE);
@@ -251,15 +251,11 @@ export async function parseExcelBuffer(buffer: ArrayBuffer): Promise<{
     if (!startDate) missing.push(IMPORT_COLUMNS.START);
     if (!dueDate) missing.push(IMPORT_COLUMNS.DUE);
     if (estimateHours == null) missing.push(IMPORT_COLUMNS.ESTIMATE);
-    if (actualHours == null) missing.push(IMPORT_COLUMNS.ACTUAL);
-    if (completedHours == null) missing.push(IMPORT_COLUMNS.COMPLETED);
-    if (remainingHours == null) missing.push(IMPORT_COLUMNS.REMAINING);
 
     if (missing.length > 0) {
       parseErrors.push({
         row: rowIndex,
         message: "error_missing_fields",
-        // attached so the UI can render the missing field list
         meta: { fields: missing.join("、") },
       });
       return;
@@ -279,9 +275,10 @@ export async function parseExcelBuffer(buffer: ArrayBuffer): Promise<{
       startDate,
       dueDate,
       estimateHours,
-      actualHours,
-      completedHours,
-      remainingHours,
+      // Auto-default these to 0 when not provided.
+      actualHours: actualHours ?? 0,
+      completedHours: completedHours ?? 0,
+      remainingHours: remainingHours ?? 0,
     });
   });
 

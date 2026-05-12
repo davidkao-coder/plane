@@ -225,7 +225,8 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
     const memberNames = members.map((m) => m.display_name);
     const moduleNames = modules.map((m) => m.name);
 
-    // All columns except 子任務 are required – mark with " *" in the header.
+    // Required columns get " *". Sub-task and actual/completed/remaining hours
+    // are optional (hours auto-default to 0 when blank).
     const headers = [
       t("issue.import.column_main") + " *",
       t("issue.import.column_sub"),
@@ -238,9 +239,9 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
       t("issue.import.column_start_date") + " *",
       t("issue.import.column_due_date") + " *",
       t("issue.import.column_estimate_hours") + " *",
-      t("issue.import.column_actual_hours") + " *",
-      t("issue.import.column_completed_hours") + " *",
-      t("issue.import.column_remaining_hours") + " *",
+      t("issue.import.column_actual_hours"),
+      t("issue.import.column_completed_hours"),
+      t("issue.import.column_remaining_hours"),
     ];
 
     const exampleRows = [
