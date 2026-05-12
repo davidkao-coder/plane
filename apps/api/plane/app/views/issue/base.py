@@ -187,6 +187,11 @@ class IssueListEndpoint(BaseAPIView):
                 "is_draft",
                 "archived_at",
                 "deleted_at",
+                # Hours tracking fields
+                "estimate_hours",
+                "actual_hours",
+                "completed_hours",
+                "remaining_hours",
             )
             datetime_fields = ["created_at", "updated_at"]
             issues = user_timezone_converter(issues, datetime_fields, request.user.user_timezone)
@@ -452,6 +457,11 @@ class IssueViewSet(BaseViewSet):
                     "is_draft",
                     "archived_at",
                     "deleted_at",
+                    # Hours tracking fields
+                    "estimate_hours",
+                    "actual_hours",
+                    "completed_hours",
+                    "remaining_hours",
                 )
                 .first()
             )
@@ -883,6 +893,11 @@ class IssuePaginatedViewSet(BaseViewSet):
             "link_count",
             "attachment_count",
             "sub_issues_count",
+            # Hours tracking fields
+            "estimate_hours",
+            "actual_hours",
+            "completed_hours",
+            "remaining_hours",
         ]
 
         if str(is_description_required).lower() == "true":

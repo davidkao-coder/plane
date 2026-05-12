@@ -165,6 +165,11 @@ class SubIssuesEndpoint(BaseAPIView):
                 "is_draft",
                 "archived_at",
                 "state_group",
+                # Hours tracking fields
+                "estimate_hours",
+                "actual_hours",
+                "completed_hours",
+                "remaining_hours",
             )
         )
 
