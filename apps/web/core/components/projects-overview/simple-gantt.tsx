@@ -23,6 +23,8 @@ import {
   type TOverviewNode,
   type TTimeScale,
 } from "@/helpers/projects-overview.helper";
+// local
+import { ModuleFilterPopover, type TModuleOption } from "./module-filter-popover";
 
 const SIDEBAR_WIDTH = 380;
 const HEADER_HEIGHT = 52;
@@ -46,6 +48,12 @@ type Props = {
   windowStart: Date;
   windowEnd: Date;
   scale: TTimeScale;
+  /** Available modules per project id (for the filter UI). */
+  modulesByProject: Map<string, TModuleOption[]>;
+  /** Current module filter selections per project id. */
+  moduleFilters: Map<string, Set<string>>;
+  /** Update the filter for a single project. */
+  onChangeModuleFilter: (projectId: string, next: Set<string>) => void;
 };
 
 // ─── Header ticks ────────────────────────────────────────────────────────────
@@ -135,7 +143,15 @@ function flattenVisible(
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function SimpleGantt({ tree, windowStart, windowEnd, scale }: Props) {
+export function SimpleGantt({
+  tree,
+  windowStart,
+  windowEnd,
+  scale,
+  modulesByProject,
+  moduleFilters,
+  onChangeModuleFilter,
+}: Props) {
   const { t } = useTranslation();
   const dayPx = pxPerDay(scale);
   const totalDays = Math.max(1, daysBetween(windowStart, windowEnd) + 1);
@@ -326,7 +342,7 @@ export function SimpleGantt({ tree, windowStart, windowEnd, scale }: Props) {
                     />
                   ) : null}
                 </div>
-                <div className="flex flex-col min-w-0 gap-0.5 leading-tight">
+                <div className="flex flex-col min-w-0 gap-0.5 leading-tight flex-1">
                   <span
                     className={cn(
                       "truncate",
@@ -352,6 +368,16 @@ export function SimpleGantt({ tree, windowStart, windowEnd, scale }: Props) {
                     </span>
                   )}
                 </div>
+                {/* Module filter button – only on project rows */}
+                {isProject && (
+                  <div className="flex-shrink-0 ml-2">
+                    <ModuleFilterPopover
+                      modules={modulesByProject.get(r.node.id) ?? []}
+                      selected={moduleFilters.get(r.node.id) ?? new Set()}
+                      onChange={(next) => onChangeModuleFilter(r.node.id, next)}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}

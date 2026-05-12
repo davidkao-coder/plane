@@ -362,18 +362,48 @@ export function computeMemberLoading(
 // ─── Tree (hierarchical project → main → sub) ────────────────────────────────
 
 /**
+ * Per-project module filter: project_id → Set of allowed module_ids.
+ * When a project is absent from the map (or its set is empty), no filter is
+ * applied for that project (all of its issues are shown).
+ */
+export type TModuleFilters = Map<string, Set<string>>;
+
+/**
  * Build a 3-level tree: projects → main tasks → sub tasks.
  * Progress at each level rolls up from its children.
+ *
+ * If `moduleFilters` is provided, only issues whose `module_ids` intersect
+ * the project's allowed module set are kept. A main task is also kept if any
+ * of its sub-tasks pass the filter (so the user still sees the parent row).
  */
 export function computeOverviewTree(
   issues: TIssue[],
   projects: ProjectLike[],
-  states: IState[]
+  states: IState[],
+  moduleFilters?: TModuleFilters
 ): TOverviewNode[] {
   const stateGroupMap = new Map<string, string>(states.map((s) => [s.id, s.group]));
   const projectMap = new Map<string, ProjectLike>(projects.map((p) => [p.id, p]));
 
-  // group issues by project, separating main vs sub
+  const filterFor = (projectId: string): Set<string> | null => {
+    if (!moduleFilters) return null;
+    const set = moduleFilters.get(projectId);
+    return set && set.size > 0 ? set : null;
+  };
+
+  const issuePassesFilter = (issue: TIssue): boolean => {
+    const pid = issue.project_id;
+    if (!pid) return true;
+    const allowed = filterFor(pid);
+    if (!allowed) return true;
+    const mods = issue.module_ids ?? [];
+    if (mods.length === 0) return false;
+    for (const m of mods) if (allowed.has(m)) return true;
+    return false;
+  };
+
+  // group issues by project, separating main vs sub – we delay filtering for
+  // main tasks until we know whether any sub-task passes (rollup behaviour).
   type Bucket = { mains: TIssue[]; subs: TIssue[] };
   const byProject = new Map<string, Bucket>();
   for (const p of projects) byProject.set(p.id, { mains: [], subs: [] });
@@ -421,8 +451,9 @@ export function computeOverviewTree(
   };
 
   const buildMainNode = (issue: TIssue, projectName: string): TOverviewNode => {
-    const kids = subsByParent.get(issue.id) ?? [];
-    const childNodes = kids
+    const allKids = subsByParent.get(issue.id) ?? [];
+    const passingKids = allKids.filter(issuePassesFilter);
+    const childNodes = passingKids
       .map((k) => buildSubNode(k, projectName))
       .sort((a, b) => {
         const at = a.startDate ? a.startDate.getTime() : Number.POSITIVE_INFINITY;
@@ -471,7 +502,15 @@ export function computeOverviewTree(
     const project = projectMap.get(projectId);
     const projectName = project?.name ?? projectId;
 
+    // Keep a main if it passes the filter itself OR has a sub that passes.
+    const keepMain = (m: TIssue): boolean => {
+      if (issuePassesFilter(m)) return true;
+      const kids = subsByParent.get(m.id) ?? [];
+      return kids.some(issuePassesFilter);
+    };
+
     const mainNodes = b.mains
+      .filter(keepMain)
       .map((m) => buildMainNode(m, projectName))
       .sort((a, b2) => {
         const at = a.startDate ? a.startDate.getTime() : Number.POSITIVE_INFINITY;
@@ -479,24 +518,41 @@ export function computeOverviewTree(
         return at - bt;
       });
 
-    // Aggregate project-level stats
-    const allIssues = [...b.mains, ...b.subs];
-    const totalCount = allIssues.length;
-    const doneCount = allIssues.filter((i) =>
+    // Aggregate project-level stats over the FILTERED set so the project row
+    // reflects what's actually being shown.
+    const filteredIssues: TIssue[] = [];
+    for (const m of b.mains) {
+      const passingMain = issuePassesFilter(m);
+      const passingKids = (subsByParent.get(m.id) ?? []).filter(issuePassesFilter);
+      if (passingMain) filteredIssues.push(m);
+      filteredIssues.push(...passingKids);
+    }
+    // also include orphan subs whose parents are not in this project (rare)
+    for (const s of b.subs) {
+      if (s.parent_id && !b.mains.some((m) => m.id === s.parent_id) && issuePassesFilter(s)) {
+        filteredIssues.push(s);
+      }
+    }
+
+    const totalCount = filteredIssues.length;
+    const doneCount = filteredIssues.filter((i) =>
       isCompletedGroup(stateGroupMap.get(i.state_id ?? ""))
     ).length;
-    const estSum = allIssues.reduce((s, i) => s + (i.estimate_hours ?? 0), 0);
-    const compSum = allIssues.reduce((s, i) => s + (i.completed_hours ?? 0), 0);
+    const estSum = filteredIssues.reduce((s, i) => s + (i.estimate_hours ?? 0), 0);
+    const compSum = filteredIssues.reduce((s, i) => s + (i.completed_hours ?? 0), 0);
 
-    // project date range = min/max of all issue dates
+    // project date range = min/max of (filtered) issue dates
     let minStart: Date | null = null;
     let maxTarget: Date | null = null;
-    for (const i of allIssues) {
+    for (const i of filteredIssues) {
       const s = parseDate(i.start_date);
       const tt = parseDate(i.target_date);
       if (s && (!minStart || s < minStart)) minStart = s;
       if (tt && (!maxTarget || tt > maxTarget)) maxTarget = tt;
     }
+
+    // skip empty projects after filtering (no matching issues at all)
+    if (mainNodes.length === 0 && totalCount === 0) continue;
 
     projectNodes.push({
       id: projectId,

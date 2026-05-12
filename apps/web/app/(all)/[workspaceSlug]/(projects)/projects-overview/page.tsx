@@ -18,6 +18,7 @@ import { ScaleToggle } from "@/components/projects-overview/scale-toggle";
 import { MemberLoadingTable } from "@/components/projects-overview/member-loading-table";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
+import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -30,9 +31,11 @@ import {
   computeOverviewTree,
   flattenTreeForDateWindow,
   type TMemberLoading,
+  type TModuleFilters,
   type TOverviewNode,
   type TTimeScale,
 } from "@/helpers/projects-overview.helper";
+import type { TModuleOption } from "@/components/projects-overview/module-filter-popover";
 import type { Route } from "./+types/page";
 
 const workspaceService = new WorkspaceService();
@@ -73,6 +76,7 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
   const { workspaceProjectIds, getProjectById } = useProject();
   const { getProjectStates } = useProjectState();
   const memberRoot = useMember();
+  const { fetchWorkspaceModules, getProjectModuleIds, getModuleById } = useModule();
 
   // ensure workspace members are loaded so we can resolve assignee names
   useEffect(() => {
@@ -84,11 +88,29 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
       });
   }, [isAdmin, workspaceSlug, memberRoot]);
 
+  // ensure workspace modules are loaded so we can offer them as filters
+  useEffect(() => {
+    if (!isAdmin || !workspaceSlug) return;
+    fetchWorkspaceModules(workspaceSlug.toString()).catch(() => {
+      /* non-fatal – filter UI will just be empty */
+    });
+  }, [isAdmin, workspaceSlug, fetchWorkspaceModules]);
+
   // local state
   const [step, setStep] = useState<TStep>("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [issues, setIssues] = useState<TIssue[]>([]);
   const [scale, setScale] = useState<TTimeScale>("month");
+  const [moduleFilters, setModuleFilters] = useState<TModuleFilters>(() => new Map());
+
+  const handleChangeModuleFilter = (projectId: string, next: Set<string>) => {
+    setModuleFilters((prev) => {
+      const m = new Map(prev);
+      if (next.size === 0) m.delete(projectId);
+      else m.set(projectId, next);
+      return m;
+    });
+  };
 
   // fetch all issues across workspace (paginated)
   useEffect(() => {
@@ -186,10 +208,26 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
     return out;
   }, [memberRoot, workspaceSlug, issues]);
 
-  // Build hierarchical tree (project → main → sub)
+  // Modules available per project (for the filter UI)
+  const modulesByProject = useMemo(() => {
+    const m = new Map<string, TModuleOption[]>();
+    for (const pid of workspaceProjectIds ?? []) {
+      const ids = getProjectModuleIds(pid) ?? [];
+      const opts = ids
+        .map((id) => getModuleById(id))
+        .filter((mm): mm is NonNullable<typeof mm> => mm != null)
+        .map((mm) => ({ id: mm.id, name: mm.name }));
+      // sort modules alphabetically for stable UI
+      opts.sort((a, b) => a.name.localeCompare(b.name));
+      m.set(pid, opts);
+    }
+    return m;
+  }, [workspaceProjectIds, getProjectModuleIds, getModuleById]);
+
+  // Build hierarchical tree (project → main → sub) – filtered by module filter
   const tree: TOverviewNode[] = useMemo(
-    () => computeOverviewTree(issues, projects, states),
-    [issues, projects, states]
+    () => computeOverviewTree(issues, projects, states, moduleFilters),
+    [issues, projects, states, moduleFilters]
   );
 
   const memberLoading: TMemberLoading[] = useMemo(
@@ -241,6 +279,9 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
                   windowStart={dateWindow.start}
                   windowEnd={dateWindow.end}
                   scale={scale}
+                  modulesByProject={modulesByProject}
+                  moduleFilters={moduleFilters}
+                  onChangeModuleFilter={handleChangeModuleFilter}
                 />
               )}
             </div>
