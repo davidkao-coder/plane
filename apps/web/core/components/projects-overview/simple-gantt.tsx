@@ -87,27 +87,13 @@ function buildTicks(start: Date, end: Date, scale: TTimeScale): Tick[] {
   return ticks;
 }
 
-function progressColor(rate: number): string {
-  if (rate >= 80) return "bg-emerald-500";
-  if (rate >= 50) return "bg-blue-500";
-  if (rate >= 20) return "bg-amber-500";
-  return "bg-rose-400";
-}
-
-/** Background of the bar "track" – visible even when there's no progress fill. */
-function barTrackBg(rate: number): string {
-  if (rate >= 80) return "bg-emerald-200 dark:bg-emerald-800/60";
-  if (rate >= 50) return "bg-blue-200 dark:bg-blue-800/60";
-  if (rate >= 20) return "bg-amber-200 dark:bg-amber-800/60";
-  return "bg-rose-200 dark:bg-rose-800/60";
-}
-
-/** Colored left edge of the bar – always visible as a 3px stripe. */
-function barAccent(rate: number): string {
-  if (rate >= 80) return "border-emerald-600";
-  if (rate >= 50) return "border-blue-600";
-  if (rate >= 20) return "border-amber-600";
-  return "border-rose-500";
+// Inline-style color palette – bypass any tailwind config issues.
+// [fillColor, trackBgColor, leftBorderColor]
+function barColors(rate: number): { fill: string; track: string; accent: string } {
+  if (rate >= 80) return { fill: "#10b981", track: "#a7f3d0", accent: "#059669" }; // emerald
+  if (rate >= 50) return { fill: "#3b82f6", track: "#bfdbfe", accent: "#2563eb" }; // blue
+  if (rate >= 20) return { fill: "#f59e0b", track: "#fde68a", accent: "#d97706" }; // amber
+  return { fill: "#fb7185", track: "#fecdd3", accent: "#e11d48" }; // rose
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -354,25 +340,29 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }
               const showInlineText = width >= 56;
 
               const rate = b.taskCompletionRate;
+              const colors = barColors(rate);
               return (
                 <div
                   key={b.id}
-                  className={cn(
-                    "absolute rounded-md overflow-hidden flex items-center shadow-sm border-l-[3px]",
-                    barTrackBg(rate),
-                    barAccent(rate)
-                  )}
-                  style={{ top, left, width, height: BAR_HEIGHT }}
+                  className="absolute rounded-md overflow-hidden flex items-center shadow-sm"
+                  style={{
+                    top,
+                    left,
+                    width,
+                    height: BAR_HEIGHT,
+                    backgroundColor: colors.track,
+                    borderLeft: `3px solid ${colors.accent}`,
+                  }}
                   title={tooltip}
                 >
                   {progressWidth > 0 && (
                     <div
-                      className={cn("absolute inset-y-0 left-0", progressColor(rate))}
-                      style={{ width: progressWidth, opacity: 0.7 }}
+                      className="absolute inset-y-0 left-0"
+                      style={{ width: progressWidth, backgroundColor: colors.fill, opacity: 0.85 }}
                     />
                   )}
                   {showInlineText && (
-                    <span className="relative px-2 text-11 font-semibold truncate text-primary">
+                    <span className="relative px-2 text-11 font-semibold truncate text-gray-900">
                       {b.completedTasks}/{b.totalTasks} · {rate}%
                     </span>
                   )}
