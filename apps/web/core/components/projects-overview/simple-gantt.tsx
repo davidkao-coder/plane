@@ -96,18 +96,18 @@ function progressColor(rate: number): string {
 
 /** Background of the bar "track" – visible even when there's no progress fill. */
 function barTrackBg(rate: number): string {
-  if (rate >= 80) return "bg-emerald-100/60 dark:bg-emerald-900/30";
-  if (rate >= 50) return "bg-blue-100/60 dark:bg-blue-900/30";
-  if (rate >= 20) return "bg-amber-100/60 dark:bg-amber-900/30";
-  return "bg-rose-100/60 dark:bg-rose-900/30";
+  if (rate >= 80) return "bg-emerald-200 dark:bg-emerald-800/60";
+  if (rate >= 50) return "bg-blue-200 dark:bg-blue-800/60";
+  if (rate >= 20) return "bg-amber-200 dark:bg-amber-800/60";
+  return "bg-rose-200 dark:bg-rose-800/60";
 }
 
 /** Colored left edge of the bar – always visible as a 3px stripe. */
 function barAccent(rate: number): string {
-  if (rate >= 80) return "border-emerald-500";
-  if (rate >= 50) return "border-blue-500";
-  if (rate >= 20) return "border-amber-500";
-  return "border-rose-400";
+  if (rate >= 80) return "border-emerald-600";
+  if (rate >= 50) return "border-blue-600";
+  if (rate >= 20) return "border-amber-600";
+  return "border-rose-500";
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
