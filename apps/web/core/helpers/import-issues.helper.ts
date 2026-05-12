@@ -175,16 +175,33 @@ export async function parseExcelBuffer(buffer: ArrayBuffer): Promise<{
   }
 
   const sheet = workbook.Sheets[sheetName];
-  const rawRows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, {
+  const rawRowsAll: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, {
     defval: "",
     raw: false, // get formatted strings for dates, numbers parsed separately
   });
 
   // Re-read with raw=true to get numeric date serials and raw numbers
-  const rawRowsRaw: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, {
+  const rawRowsRawAll: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, {
     defval: "",
     raw: true,
   });
+
+  // Normalize header keys: strip leading/trailing whitespace AND a trailing " *"
+  // marker (we add " *" to required columns in the template, but the parser
+  // matches against the bare column name in IMPORT_COLUMNS).
+  const normalizeKey = (k: string): string =>
+    k.replace(/\s*\*\s*$/, "").trim();
+
+  const normalizeRow = (row: Record<string, unknown>): Record<string, unknown> => {
+    const out: Record<string, unknown> = {};
+    for (const k of Object.keys(row)) {
+      out[normalizeKey(k)] = row[k];
+    }
+    return out;
+  };
+
+  const rawRows = rawRowsAll.map(normalizeRow);
+  const rawRowsRaw = rawRowsRawAll.map(normalizeRow);
 
   const rows: TParsedIssueRow[] = [];
   const parseErrors: TImportError[] = [];
