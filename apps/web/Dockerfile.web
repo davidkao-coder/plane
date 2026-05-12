@@ -3,7 +3,8 @@ FROM node:22-alpine AS base
 
 # Setup pnpm package manager with corepack and configure global bin directory for caching
 ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+# Include both /pnpm and /pnpm/bin – newer pnpm (>=11) puts the bin in /pnpm/bin
+ENV PATH="/pnpm/bin:$PNPM_HOME:$PATH"
 RUN corepack enable
 
 # *****************************************************************************
