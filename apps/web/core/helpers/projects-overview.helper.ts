@@ -379,12 +379,12 @@ export function computeDateWindow(blocks: TOverviewBlock[]): { start: Date; end:
 export function pxPerDay(scale: TTimeScale): number {
   switch (scale) {
     case "week":
-      return 32; // 32px per day → a 7-day week is 224px
+      return 36; // 1 week ≈ 252px
     case "month":
-      return 8;
+      return 16; // 1 month ≈ 480px – enough for "2/1" labels and visible bars
     case "quarter":
     default:
-      return 3;
+      return 6; // 3 months ≈ 540px
   }
 }
 

@@ -21,10 +21,12 @@ import {
   type TTimeScale,
 } from "@/helpers/projects-overview.helper";
 
-const SIDEBAR_WIDTH = 320;
-const ROW_HEIGHT = 40;
-const HEADER_HEIGHT = 56;
-const BAR_HEIGHT = 22;
+const SIDEBAR_WIDTH = 360;
+const ROW_HEIGHT = 44;
+const HEADER_HEIGHT = 52;
+const BAR_HEIGHT = 26;
+const MIN_BAR_WIDTH = 28; // tiny tasks still visible
+const GROUP_ROW_HEIGHT = 32;
 
 type Props = {
   blocks: TOverviewBlock[];
@@ -43,8 +45,9 @@ function buildTicks(start: Date, end: Date, scale: TTimeScale): Tick[] {
   d.setHours(0, 0, 0, 0);
 
   if (scale === "week") {
+    // every day a tick; label every day; Monday is major
     while (d <= end) {
-      const isMajor = d.getDay() === 1; // Monday
+      const isMajor = d.getDay() === 1;
       ticks.push({
         date: new Date(d),
         label: `${d.getMonth() + 1}/${d.getDate()}`,
@@ -53,24 +56,27 @@ function buildTicks(start: Date, end: Date, scale: TTimeScale): Tick[] {
       d.setDate(d.getDate() + 1);
     }
   } else if (scale === "month") {
+    // label on the 1st, 8th, 15th, 22nd; major = 1st
     while (d <= end) {
-      const isMajor = d.getDate() === 1;
-      const showLabel = d.getDate() === 1 || d.getDate() === 15;
+      const day = d.getDate();
+      const isMajor = day === 1;
+      const showLabel = day === 1 || day === 8 || day === 15 || day === 22;
       ticks.push({
         date: new Date(d),
-        label: showLabel ? `${d.getMonth() + 1}/${d.getDate()}` : "",
+        label: showLabel ? `${d.getMonth() + 1}/${day}` : "",
         isMajor,
       });
       d.setDate(d.getDate() + 1);
     }
   } else {
-    // quarter
+    // quarter: label every 1st and 15th, major = 1st of month
     while (d <= end) {
-      const isMajor = d.getDate() === 1;
-      const showLabel = d.getDate() === 1;
+      const day = d.getDate();
+      const isMajor = day === 1;
+      const showLabel = day === 1;
       ticks.push({
         date: new Date(d),
-        label: showLabel ? `${d.getFullYear()}/${d.getMonth() + 1}` : "",
+        label: showLabel ? `${d.getFullYear() % 100}/${d.getMonth() + 1}` : "",
         isMajor,
       });
       d.setDate(d.getDate() + 1);
@@ -86,6 +92,13 @@ function progressColor(rate: number): string {
   return "bg-rose-400";
 }
 
+function progressTextColor(rate: number): string {
+  if (rate >= 80) return "text-emerald-700 dark:text-emerald-300";
+  if (rate >= 50) return "text-blue-700 dark:text-blue-300";
+  if (rate >= 20) return "text-amber-700 dark:text-amber-300";
+  return "text-rose-700 dark:text-rose-300";
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
@@ -97,7 +110,7 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
 
   const ticks = useMemo(() => buildTicks(windowStart, windowEnd, scale), [windowStart, windowEnd, scale]);
 
-  // group blocks by groupName for visual grouping (only matters for main/sub modes)
+  // group blocks by groupName for visual grouping
   const grouped = useMemo(() => {
     const groups: { name: string; items: TOverviewBlock[] }[] = [];
     const idx = new Map<string, number>();
@@ -114,13 +127,36 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
     return groups;
   }, [blocks]);
 
-  // total rows = rows + group headers (skip group header when name is empty, e.g. project mode)
-  const flatRows: { type: "group" | "block"; group?: string; block?: TOverviewBlock }[] = [];
-  for (const g of grouped) {
-    if (g.name) flatRows.push({ type: "group", group: g.name });
-    for (const b of g.items) flatRows.push({ type: "block", block: b });
-  }
-  const bodyHeight = flatRows.length * ROW_HEIGHT;
+  // Flatten with explicit y-position so groups can have a different height than rows.
+  type RowInfo =
+    | { type: "group"; group: string; y: number; height: number }
+    | { type: "block"; block: TOverviewBlock; y: number; height: number; isAlt: boolean };
+
+  const flatRows: RowInfo[] = useMemo(() => {
+    const arr: RowInfo[] = [];
+    let y = 0;
+    let blockIndex = 0;
+    for (const g of grouped) {
+      if (g.name) {
+        arr.push({ type: "group", group: g.name, y, height: GROUP_ROW_HEIGHT });
+        y += GROUP_ROW_HEIGHT;
+      }
+      for (const b of g.items) {
+        arr.push({
+          type: "block",
+          block: b,
+          y,
+          height: ROW_HEIGHT,
+          isAlt: blockIndex % 2 === 1,
+        });
+        y += ROW_HEIGHT;
+        blockIndex++;
+      }
+    }
+    return arr;
+  }, [grouped]);
+
+  const bodyHeight = flatRows.reduce((sum, r) => sum + r.height, 0);
 
   const todayOffsetPx = (() => {
     const today = new Date();
@@ -129,7 +165,7 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
     return daysBetween(windowStart, today) * dayPx;
   })();
 
-  // auto-scroll so "today" is roughly centered on first mount
+  // auto-scroll so "today" is roughly centered on first mount / on scale change
   useEffect(() => {
     if (todayOffsetPx != null && scrollRef.current) {
       const container = scrollRef.current;
@@ -139,46 +175,51 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scale]);
 
+  // Subtitle should hide when it duplicates the group header
+  const showSubtitle = (b: TOverviewBlock) => b.subtitle && b.subtitle !== b.groupName;
+
   return (
-    <div className="flex w-full h-full overflow-hidden rounded-md border border-subtle bg-surface-1">
+    <div className="flex w-full h-full overflow-hidden rounded-lg border border-subtle bg-surface-1 shadow-sm">
       {/* ── Sidebar ───────────────────────────────────────────────────────── */}
-      <div
-        className="flex-shrink-0 border-r border-subtle"
-        style={{ width: SIDEBAR_WIDTH }}
-      >
+      <div className="flex-shrink-0 border-r border-subtle bg-surface-1" style={{ width: SIDEBAR_WIDTH }}>
+        {/* sidebar header */}
         <div
-          className="border-b border-subtle bg-surface-2 px-3 py-2 text-12 font-semibold text-secondary"
+          className="flex items-end px-4 pb-2 border-b border-subtle bg-surface-2 text-13 font-semibold text-secondary"
           style={{ height: HEADER_HEIGHT }}
         >
-          {t("projects_overview_page.title")}
-          <div className="text-11 font-normal text-tertiary mt-0.5">
-            {blocks.length} {t("projects_overview_page.view_main_task")}
+          <div className="flex items-baseline gap-2">
+            <span>{t("projects_overview_page.title")}</span>
+            <span className="text-11 font-normal text-tertiary">{blocks.length}</span>
           </div>
         </div>
-        <div style={{ height: bodyHeight }}>
+        {/* sidebar body */}
+        <div className="relative" style={{ height: bodyHeight }}>
           {flatRows.map((row, i) => {
             if (row.type === "group") {
               return (
                 <div
                   key={`g-${i}`}
-                  className="flex items-center px-3 bg-surface-2 text-12 font-semibold text-secondary border-b border-subtle"
-                  style={{ height: ROW_HEIGHT }}
+                  className="absolute left-0 right-0 flex items-center px-3 bg-surface-2/80 text-12 font-semibold text-secondary border-b border-subtle"
+                  style={{ top: row.y, height: row.height }}
                 >
-                  {row.group}
+                  <span className="truncate">{row.group}</span>
                 </div>
               );
             }
-            const b = row.block!;
+            const b = row.block;
             return (
               <div
                 key={b.id}
-                className="flex items-center px-3 border-b border-subtle text-13"
-                style={{ height: ROW_HEIGHT }}
+                className={cn(
+                  "absolute left-0 right-0 flex items-center px-4 border-b border-subtle/60",
+                  row.isAlt ? "bg-surface-1" : "bg-surface-2/30"
+                )}
+                style={{ top: row.y, height: row.height }}
               >
-                <div className="flex flex-col min-w-0">
-                  <span className="truncate font-medium text-primary">{b.name}</span>
-                  {b.subtitle && (
-                    <span className="truncate text-11 text-tertiary">{b.subtitle}</span>
+                <div className="flex flex-col min-w-0 gap-0.5">
+                  <span className="truncate text-13 font-medium text-primary leading-tight">{b.name}</span>
+                  {showSubtitle(b) && (
+                    <span className="truncate text-11 text-tertiary leading-tight">{b.subtitle}</span>
                   )}
                 </div>
               </div>
@@ -188,7 +229,7 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
       </div>
 
       {/* ── Timeline ─────────────────────────────────────────────────────── */}
-      <div ref={scrollRef} className="flex-1 overflow-auto relative">
+      <div ref={scrollRef} className="flex-1 overflow-auto relative bg-surface-1">
         <div style={{ width: timelineWidth, position: "relative" }}>
           {/* Header */}
           <div
@@ -196,21 +237,34 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
             style={{ height: HEADER_HEIGHT }}
           >
             <div className="relative h-full">
-              {ticks.map((tk, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "absolute top-0 bottom-0 flex flex-col justify-end pb-1 pl-1 text-10 select-none",
-                    tk.isMajor ? "border-l border-subtle text-secondary" : "text-transparent"
-                  )}
-                  style={{ left: i * dayPx, width: dayPx }}
-                >
-                  {tk.label}
-                </div>
-              ))}
+              {/* major tick separators */}
+              {ticks.map((tk, i) =>
+                tk.isMajor ? (
+                  <div
+                    key={`hsep-${i}`}
+                    className="absolute top-0 bottom-0 w-px bg-subtle/60"
+                    style={{ left: i * dayPx }}
+                  />
+                ) : null
+              )}
+              {/* labels – no width constraint so they don't get clipped */}
+              {ticks.map((tk, i) =>
+                tk.label ? (
+                  <div
+                    key={`hlbl-${i}`}
+                    className={cn(
+                      "absolute bottom-1 pl-1 text-11 whitespace-nowrap select-none",
+                      tk.isMajor ? "text-secondary font-medium" : "text-tertiary"
+                    )}
+                    style={{ left: i * dayPx }}
+                  >
+                    {tk.label}
+                  </div>
+                ) : null
+              )}
               {todayOffsetPx != null && (
                 <div
-                  className="absolute top-0 bottom-0 w-px bg-rose-500"
+                  className="absolute top-0 bottom-0 w-0.5 bg-rose-500 z-20"
                   style={{ left: todayOffsetPx }}
                   title={t("projects_overview_page.today")}
                 />
@@ -220,53 +274,64 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
 
           {/* Body */}
           <div className="relative" style={{ height: bodyHeight }}>
-            {/* vertical grid lines */}
+            {/* zebra row backgrounds */}
+            {flatRows.map((row, i) => (
+              <div
+                key={`bg-${i}`}
+                className={cn(
+                  "absolute left-0 right-0 border-b border-subtle/60",
+                  row.type === "group"
+                    ? "bg-surface-2/80"
+                    : row.isAlt
+                      ? "bg-surface-1"
+                      : "bg-surface-2/30"
+                )}
+                style={{ top: row.y, height: row.height }}
+              />
+            ))}
+
+            {/* vertical grid lines (major ticks) */}
             {ticks.map((tk, i) =>
               tk.isMajor ? (
                 <div
                   key={`gl-${i}`}
-                  className="absolute top-0 bottom-0 w-px bg-subtle/50"
+                  className="absolute top-0 bottom-0 w-px bg-subtle/40 pointer-events-none"
                   style={{ left: i * dayPx }}
                 />
               ) : null
             )}
-            {/* today line over body */}
+
+            {/* today line */}
             {todayOffsetPx != null && (
               <div
-                className="absolute top-0 bottom-0 w-px bg-rose-500/70 pointer-events-none"
+                className="absolute top-0 bottom-0 w-0.5 bg-rose-500/70 pointer-events-none z-10"
                 style={{ left: todayOffsetPx }}
               />
             )}
 
-            {flatRows.map((row, i) => {
-              if (row.type === "group") {
-                return (
-                  <div
-                    key={`gh-${i}`}
-                    className="absolute left-0 right-0 bg-surface-2 border-b border-subtle"
-                    style={{ top: i * ROW_HEIGHT, height: ROW_HEIGHT }}
-                  />
-                );
-              }
-              const b = row.block!;
+            {/* bars */}
+            {flatRows.map((row) => {
+              if (row.type === "group") return null;
+              const b = row.block;
               const start = b.startDate;
               const end = b.targetDate ?? b.startDate;
-              const top = i * ROW_HEIGHT + (ROW_HEIGHT - BAR_HEIGHT) / 2;
+              const top = row.y + (row.height - BAR_HEIGHT) / 2;
+
               if (!start || !end) {
-                // unscheduled - show a placeholder text
                 return (
                   <div
                     key={b.id}
                     className="absolute left-2 text-11 text-tertiary italic"
-                    style={{ top: top + 2 }}
+                    style={{ top: top + 4 }}
                   >
                     {t("projects_overview_page.block_no_date")}
                   </div>
                 );
               }
+
               const left = daysBetween(windowStart, start) * dayPx;
               const widthDays = Math.max(1, daysBetween(start, end) + 1);
-              const width = widthDays * dayPx;
+              const width = Math.max(MIN_BAR_WIDTH, widthDays * dayPx);
               const progressWidth = (width * b.taskCompletionRate) / 100;
               const tooltip = `${b.name}\n${t("projects_overview_page.tooltip_tasks", {
                 done: b.completedTasks,
@@ -275,32 +340,35 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
                 done: b.completedHours,
                 total: b.estimateHours,
               })}`;
+              const showInlineText = width >= 56;
+
               return (
                 <div
                   key={b.id}
-                  className="absolute rounded bg-surface-3 border border-subtle overflow-hidden flex items-center"
+                  className={cn(
+                    "absolute rounded-md border overflow-hidden flex items-center shadow-sm",
+                    "bg-surface-3/70 border-subtle"
+                  )}
                   style={{ top, left, width, height: BAR_HEIGHT }}
                   title={tooltip}
                 >
                   <div
-                    className={cn("absolute inset-y-0 left-0", progressColor(b.taskCompletionRate))}
-                    style={{ width: progressWidth, opacity: 0.55 }}
+                    className={cn("absolute inset-y-0 left-0 rounded-l-md", progressColor(b.taskCompletionRate))}
+                    style={{ width: progressWidth, opacity: 0.45 }}
                   />
-                  <span className="relative px-1.5 text-11 font-medium text-primary truncate">
-                    {b.completedTasks}/{b.totalTasks} · {b.taskCompletionRate}%
-                  </span>
+                  {showInlineText && (
+                    <span
+                      className={cn(
+                        "relative px-2 text-11 font-semibold truncate",
+                        progressTextColor(b.taskCompletionRate)
+                      )}
+                    >
+                      {b.completedTasks}/{b.totalTasks} · {b.taskCompletionRate}%
+                    </span>
+                  )}
                 </div>
               );
             })}
-
-            {/* horizontal row separators */}
-            {flatRows.map((_, i) => (
-              <div
-                key={`rs-${i}`}
-                className="absolute left-0 right-0 border-b border-subtle"
-                style={{ top: (i + 1) * ROW_HEIGHT - 1, height: 1 }}
-              />
-            ))}
           </div>
         </div>
       </div>
