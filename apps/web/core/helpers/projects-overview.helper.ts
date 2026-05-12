@@ -16,6 +16,28 @@ import type { IState, IUserLite, TIssue } from "@plane/types";
 
 export type TOverviewMode = "project" | "main" | "sub";
 
+export type TOverviewNodeType = "project" | "main" | "sub";
+
+/**
+ * Recursive node for the hierarchical tree view:
+ *   project → main task (parent_id === null) → sub task (parent_id !== null)
+ */
+export type TOverviewNode = {
+  id: string;
+  type: TOverviewNodeType;
+  name: string;
+  subtitle?: string;
+  startDate: Date | null;
+  targetDate: Date | null;
+  totalTasks: number;
+  completedTasks: number;
+  taskCompletionRate: number; // 0-100
+  estimateHours: number;
+  completedHours: number;
+  hoursCompletionRate: number; // 0-100
+  children: TOverviewNode[];
+};
+
 // ─── Output types ────────────────────────────────────────────────────────────
 
 export type TOverviewBlock = {
@@ -337,18 +359,189 @@ export function computeMemberLoading(
     .sort((a, b) => b.totalIssues - a.totalIssues);
 }
 
+// ─── Tree (hierarchical project → main → sub) ────────────────────────────────
+
+/**
+ * Build a 3-level tree: projects → main tasks → sub tasks.
+ * Progress at each level rolls up from its children.
+ */
+export function computeOverviewTree(
+  issues: TIssue[],
+  projects: ProjectLike[],
+  states: IState[]
+): TOverviewNode[] {
+  const stateGroupMap = new Map<string, string>(states.map((s) => [s.id, s.group]));
+  const projectMap = new Map<string, ProjectLike>(projects.map((p) => [p.id, p]));
+
+  // group issues by project, separating main vs sub
+  type Bucket = { mains: TIssue[]; subs: TIssue[] };
+  const byProject = new Map<string, Bucket>();
+  for (const p of projects) byProject.set(p.id, { mains: [], subs: [] });
+
+  for (const issue of issues) {
+    const pid = issue.project_id;
+    if (!pid) continue;
+    let b = byProject.get(pid);
+    if (!b) {
+      b = { mains: [], subs: [] };
+      byProject.set(pid, b);
+    }
+    if (issue.parent_id === null) b.mains.push(issue);
+    else b.subs.push(issue);
+  }
+
+  // index subs by parent for quick lookup
+  const subsByParent = new Map<string, TIssue[]>();
+  for (const issue of issues) {
+    if (issue.parent_id) {
+      const list = subsByParent.get(issue.parent_id);
+      if (list) list.push(issue);
+      else subsByParent.set(issue.parent_id, [issue]);
+    }
+  }
+
+  const buildSubNode = (issue: TIssue, projectName: string): TOverviewNode => {
+    const group = stateGroupMap.get(issue.state_id ?? "");
+    const done = isCompletedGroup(group) ? 1 : 0;
+    return {
+      id: issue.id,
+      type: "sub",
+      name: issue.name,
+      subtitle: projectName,
+      startDate: parseDate(issue.start_date),
+      targetDate: parseDate(issue.target_date),
+      totalTasks: 1,
+      completedTasks: done,
+      taskCompletionRate: pct(done, 1),
+      estimateHours: round1(issue.estimate_hours ?? 0),
+      completedHours: round1(issue.completed_hours ?? 0),
+      hoursCompletionRate: pct(issue.completed_hours ?? 0, issue.estimate_hours ?? 0),
+      children: [],
+    };
+  };
+
+  const buildMainNode = (issue: TIssue, projectName: string): TOverviewNode => {
+    const kids = subsByParent.get(issue.id) ?? [];
+    const childNodes = kids
+      .map((k) => buildSubNode(k, projectName))
+      .sort((a, b) => {
+        const at = a.startDate ? a.startDate.getTime() : Number.POSITIVE_INFINITY;
+        const bt = b.startDate ? b.startDate.getTime() : Number.POSITIVE_INFINITY;
+        return at - bt;
+      });
+
+    // own date/progress
+    const group = stateGroupMap.get(issue.state_id ?? "");
+    const ownDone = isCompletedGroup(group) ? 1 : 0;
+
+    // rollup if has kids: count children completion; else use own
+    let total: number, done: number, est: number, comp: number;
+    if (childNodes.length > 0) {
+      total = childNodes.length;
+      done = childNodes.filter((c) => c.completedTasks === 1).length;
+      est = childNodes.reduce((s, c) => s + c.estimateHours, 0) || (issue.estimate_hours ?? 0);
+      comp = childNodes.reduce((s, c) => s + c.completedHours, 0) || (issue.completed_hours ?? 0);
+    } else {
+      total = 1;
+      done = ownDone;
+      est = issue.estimate_hours ?? 0;
+      comp = issue.completed_hours ?? 0;
+    }
+
+    return {
+      id: issue.id,
+      type: "main",
+      name: issue.name,
+      subtitle: projectName,
+      startDate: parseDate(issue.start_date),
+      targetDate: parseDate(issue.target_date),
+      totalTasks: total,
+      completedTasks: done,
+      taskCompletionRate: pct(done, total),
+      estimateHours: round1(est),
+      completedHours: round1(comp),
+      hoursCompletionRate: pct(comp, est),
+      children: childNodes,
+    };
+  };
+
+  const projectNodes: TOverviewNode[] = [];
+  for (const [projectId, b] of byProject) {
+    if (b.mains.length === 0 && b.subs.length === 0) continue;
+    const project = projectMap.get(projectId);
+    const projectName = project?.name ?? projectId;
+
+    const mainNodes = b.mains
+      .map((m) => buildMainNode(m, projectName))
+      .sort((a, b2) => {
+        const at = a.startDate ? a.startDate.getTime() : Number.POSITIVE_INFINITY;
+        const bt = b2.startDate ? b2.startDate.getTime() : Number.POSITIVE_INFINITY;
+        return at - bt;
+      });
+
+    // Aggregate project-level stats
+    const allIssues = [...b.mains, ...b.subs];
+    const totalCount = allIssues.length;
+    const doneCount = allIssues.filter((i) =>
+      isCompletedGroup(stateGroupMap.get(i.state_id ?? ""))
+    ).length;
+    const estSum = allIssues.reduce((s, i) => s + (i.estimate_hours ?? 0), 0);
+    const compSum = allIssues.reduce((s, i) => s + (i.completed_hours ?? 0), 0);
+
+    // project date range = min/max of all issue dates
+    let minStart: Date | null = null;
+    let maxTarget: Date | null = null;
+    for (const i of allIssues) {
+      const s = parseDate(i.start_date);
+      const tt = parseDate(i.target_date);
+      if (s && (!minStart || s < minStart)) minStart = s;
+      if (tt && (!maxTarget || tt > maxTarget)) maxTarget = tt;
+    }
+
+    projectNodes.push({
+      id: projectId,
+      type: "project",
+      name: projectName,
+      startDate: minStart,
+      targetDate: maxTarget,
+      totalTasks: totalCount,
+      completedTasks: doneCount,
+      taskCompletionRate: pct(doneCount, totalCount),
+      estimateHours: round1(estSum),
+      completedHours: round1(compSum),
+      hoursCompletionRate: pct(compSum, estSum),
+      children: mainNodes,
+    });
+  }
+
+  return projectNodes.sort((a, b) => b.totalTasks - a.totalTasks);
+}
+
+/** Collect all date-having nodes across the entire tree (for date-window calc). */
+export function flattenTreeForDateWindow(tree: TOverviewNode[]): TOverviewNode[] {
+  const out: TOverviewNode[] = [];
+  const walk = (n: TOverviewNode) => {
+    out.push(n);
+    for (const c of n.children) walk(c);
+  };
+  for (const n of tree) walk(n);
+  return out;
+}
+
 // ─── Date-range / scaling helpers (for the custom Gantt) ─────────────────────
 
 export type TTimeScale = "week" | "month" | "quarter";
 
 /**
- * Compute the visible date window for a set of blocks.
+ * Compute the visible date window for a set of nodes/blocks.
  * Falls back to a sensible default centered on today when no dates exist.
  */
-export function computeDateWindow(blocks: TOverviewBlock[]): { start: Date; end: Date } {
+export function computeDateWindow(
+  items: Array<{ startDate: Date | null; targetDate: Date | null }>
+): { start: Date; end: Date } {
   let min: Date | null = null;
   let max: Date | null = null;
-  for (const b of blocks) {
+  for (const b of items) {
     if (b.startDate && (!min || b.startDate < min)) min = b.startDate;
     if (b.targetDate && (!max || b.targetDate > max)) max = b.targetDate;
   }

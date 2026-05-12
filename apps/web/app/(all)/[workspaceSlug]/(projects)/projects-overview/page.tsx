@@ -14,7 +14,6 @@ import type { IState, IUserLite, TIssue } from "@plane/types";
 // components
 import { PageHead } from "@/components/core/page-title";
 import { SimpleGantt } from "@/components/projects-overview/simple-gantt";
-import { ViewToggle } from "@/components/projects-overview/view-toggle";
 import { ScaleToggle } from "@/components/projects-overview/scale-toggle";
 import { MemberLoadingTable } from "@/components/projects-overview/member-loading-table";
 // hooks
@@ -28,10 +27,10 @@ import { WorkspaceService } from "@/services/workspace.service";
 import {
   computeDateWindow,
   computeMemberLoading,
-  computeOverviewBlocks,
+  computeOverviewTree,
+  flattenTreeForDateWindow,
   type TMemberLoading,
-  type TOverviewBlock,
-  type TOverviewMode,
+  type TOverviewNode,
   type TTimeScale,
 } from "@/helpers/projects-overview.helper";
 import type { Route } from "./+types/page";
@@ -89,7 +88,6 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
   const [step, setStep] = useState<TStep>("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [issues, setIssues] = useState<TIssue[]>([]);
-  const [mode, setMode] = useState<TOverviewMode>("project");
   const [scale, setScale] = useState<TTimeScale>("month");
 
   // fetch all issues across workspace (paginated)
@@ -188,10 +186,10 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
     return out;
   }, [memberRoot, workspaceSlug, issues]);
 
-  // compute blocks + member loading
-  const blocks: TOverviewBlock[] = useMemo(
-    () => computeOverviewBlocks(mode, issues, projects, states),
-    [mode, issues, projects, states]
+  // Build hierarchical tree (project → main → sub)
+  const tree: TOverviewNode[] = useMemo(
+    () => computeOverviewTree(issues, projects, states),
+    [issues, projects, states]
   );
 
   const memberLoading: TMemberLoading[] = useMemo(
@@ -199,7 +197,10 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
     [issues, members, states, projects]
   );
 
-  const dateWindow = useMemo(() => computeDateWindow(blocks), [blocks]);
+  const dateWindow = useMemo(
+    () => computeDateWindow(flattenTreeForDateWindow(tree)),
+    [tree]
+  );
 
   if (!isAdmin) return null;
 
@@ -208,8 +209,7 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
       <PageHead title={t("projects_overview_page.title")} />
       <div className="flex h-full w-full flex-col gap-4 overflow-y-auto p-4">
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <ViewToggle value={mode} onChange={setMode} />
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <ScaleToggle value={scale} onChange={setScale} />
         </div>
 
@@ -231,23 +231,16 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
           <>
             {/* Gantt */}
             <div className="h-[60vh] min-h-[420px]">
-              {blocks.length === 0 ? (
+              {tree.length === 0 ? (
                 <div className="flex h-full items-center justify-center rounded-md border border-subtle bg-surface-1 text-tertiary text-13">
                   {t("projects_overview_page.no_data")}
                 </div>
               ) : (
                 <SimpleGantt
-                  blocks={blocks}
+                  tree={tree}
                   windowStart={dateWindow.start}
                   windowEnd={dateWindow.end}
                   scale={scale}
-                  modeLabel={t(
-                    mode === "project"
-                      ? "projects_overview_page.view_project"
-                      : mode === "main"
-                        ? "projects_overview_page.view_main_task"
-                        : "projects_overview_page.view_sub_task"
-                  )}
                 />
               )}
             </div>

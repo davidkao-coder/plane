@@ -3,43 +3,49 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  *
- * Lightweight read-only Gantt for the Projects Overview page.
+ * Hierarchical read-only Gantt for the Projects Overview page.
  *
- * Single scrollable container handles BOTH X and Y scroll. The sidebar
- * column and the timeline header are made "sticky" so they stay pinned
- * to their respective edges while scrolling.
+ *   Project   ──click▶  Main task   ──click▶  Sub task
+ *
+ * Single scrollable container (overflow: auto) drives BOTH X and Y scroll.
+ * Sidebar column + header row use `position: sticky` so they stay pinned
+ * to their respective edges while content scrolls.
  */
 
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { useTranslation } from "@plane/i18n";
 import { cn } from "@plane/utils";
 // helpers
 import {
   daysBetween,
   pxPerDay,
-  type TOverviewBlock,
+  type TOverviewNode,
   type TTimeScale,
 } from "@/helpers/projects-overview.helper";
 
-const SIDEBAR_WIDTH = 360;
-const ROW_HEIGHT = 44;
+const SIDEBAR_WIDTH = 380;
 const HEADER_HEIGHT = 52;
-const BAR_HEIGHT = 26;
-const MIN_BAR_WIDTH = 28; // tiny tasks still visible
-const GROUP_ROW_HEIGHT = 32;
+const BAR_HEIGHT = 24;
+const MIN_BAR_WIDTH = 26;
 
-// Solid background colors – used on sticky cells so content behind them
-// doesn't bleed through during scroll. Match Plane theme tokens.
+// Per-type row height (project rows are taller for emphasis)
+const ROW_HEIGHT_BY_TYPE: Record<TOverviewNode["type"], number> = {
+  project: 48,
+  main: 40,
+  sub: 36,
+};
+const INDENT_BY_LEVEL = [12, 32, 52];
+
+// Plane theme tokens for solid sticky backgrounds
 const STICKY_BG = "var(--bg-surface-1)";
 const STICKY_BG_ALT = "var(--bg-surface-2)";
 
 type Props = {
-  blocks: TOverviewBlock[];
+  tree: TOverviewNode[];
   windowStart: Date;
   windowEnd: Date;
   scale: TTimeScale;
-  /** Human label for the kind of blocks shown (e.g. "主任務"). */
-  modeLabel: string;
 };
 
 // ─── Header ticks ────────────────────────────────────────────────────────────
@@ -96,64 +102,80 @@ function barColors(rate: number): { fill: string; track: string; accent: string 
   return { fill: "#fb7185", track: "#fecdd3", accent: "#e11d48" };
 }
 
+// ─── Flatten visible rows ────────────────────────────────────────────────────
+
+type Row = {
+  node: TOverviewNode;
+  level: number;
+  y: number;
+  height: number;
+  hasChildren: boolean;
+  isExpanded: boolean;
+};
+
+function flattenVisible(
+  tree: TOverviewNode[],
+  expanded: Set<string>
+): Row[] {
+  const rows: Row[] = [];
+  let y = 0;
+  const walk = (node: TOverviewNode, level: number) => {
+    const height = ROW_HEIGHT_BY_TYPE[node.type];
+    const isExpanded = expanded.has(node.id);
+    const hasChildren = node.children.length > 0;
+    rows.push({ node, level, y, height, hasChildren, isExpanded });
+    y += height;
+    if (isExpanded) {
+      for (const c of node.children) walk(c, level + 1);
+    }
+  };
+  for (const root of tree) walk(root, 0);
+  return rows;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }: Props) {
+export function SimpleGantt({ tree, windowStart, windowEnd, scale }: Props) {
   const { t } = useTranslation();
   const dayPx = pxPerDay(scale);
   const totalDays = Math.max(1, daysBetween(windowStart, windowEnd) + 1);
   const timelineWidth = totalDays * dayPx;
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
+  // expanded state: by default open all project nodes so user sees something useful
+  const [expanded, setExpanded] = useState<Set<string>>(() => {
+    const s = new Set<string>();
+    for (const root of tree) s.add(root.id);
+    return s;
+  });
+
+  // when tree composition changes, ensure all projects are expanded by default
+  useEffect(() => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const root of tree) {
+        if (!next.has(root.id)) {
+          next.add(root.id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [tree]);
+
+  const toggle = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const ticks = useMemo(() => buildTicks(windowStart, windowEnd, scale), [windowStart, windowEnd, scale]);
-
-  // Group blocks by groupName for visual grouping
-  const grouped = useMemo(() => {
-    const groups: { name: string; items: TOverviewBlock[] }[] = [];
-    const idx = new Map<string, number>();
-    for (const b of blocks) {
-      const key = b.groupName || "";
-      const i = idx.get(key);
-      if (i == null) {
-        idx.set(key, groups.length);
-        groups.push({ name: key, items: [b] });
-      } else {
-        groups[i].items.push(b);
-      }
-    }
-    return groups;
-  }, [blocks]);
-
-  // Flatten with explicit y-position so groups can have a different height than rows.
-  type RowInfo =
-    | { type: "group"; group: string; y: number; height: number }
-    | { type: "block"; block: TOverviewBlock; y: number; height: number; isAlt: boolean };
-
-  const flatRows: RowInfo[] = useMemo(() => {
-    const arr: RowInfo[] = [];
-    let y = 0;
-    let blockIndex = 0;
-    for (const g of grouped) {
-      if (g.name) {
-        arr.push({ type: "group", group: g.name, y, height: GROUP_ROW_HEIGHT });
-        y += GROUP_ROW_HEIGHT;
-      }
-      for (const b of g.items) {
-        arr.push({
-          type: "block",
-          block: b,
-          y,
-          height: ROW_HEIGHT,
-          isAlt: blockIndex % 2 === 1,
-        });
-        y += ROW_HEIGHT;
-        blockIndex++;
-      }
-    }
-    return arr;
-  }, [grouped]);
-
-  const bodyHeight = flatRows.reduce((sum, r) => sum + r.height, 0);
+  const visibleRows = useMemo(() => flattenVisible(tree, expanded), [tree, expanded]);
+  const bodyHeight = visibleRows.reduce((sum, r) => sum + r.height, 0);
   const totalWidth = SIDEBAR_WIDTH + timelineWidth;
   const totalHeight = HEADER_HEIGHT + bodyHeight;
 
@@ -164,7 +186,7 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }
     return daysBetween(windowStart, today) * dayPx;
   })();
 
-  // Auto-scroll horizontally so "today" is roughly centered when scale changes
+  // Auto-scroll so "today" is roughly centered on first mount / on scale change
   useEffect(() => {
     if (todayOffsetPx != null && scrollRef.current) {
       const container = scrollRef.current;
@@ -174,15 +196,14 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scale]);
 
-  const showSubtitle = (b: TOverviewBlock) => b.subtitle && b.subtitle !== b.groupName;
+  const totalProjects = tree.length;
+  const totalIssues = tree.reduce((s, p) => s + p.totalTasks, 0);
 
   return (
     <div
       ref={scrollRef}
       className="relative w-full h-full overflow-auto rounded-lg border border-subtle bg-surface-1 shadow-sm"
     >
-      {/* CSS Grid: 2×2 layout. Sticky cells lock to viewport edges, so the
-          OUTER container is the only thing that scrolls (both axes). */}
       <div
         style={{
           display: "grid",
@@ -192,7 +213,7 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }
           height: totalHeight,
         }}
       >
-        {/* ── (1,1) Top-left corner ────────────────────────────────────── */}
+        {/* ── (1,1) Top-left corner ─────────────────────────────────── */}
         <div
           className="border-b border-r border-subtle flex items-end px-4 pb-2 text-13 font-semibold text-secondary"
           style={{
@@ -206,12 +227,14 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }
           }}
         >
           <div className="flex items-baseline gap-2">
-            <span>{modeLabel}</span>
-            <span className="text-12 font-normal text-tertiary">· {blocks.length}</span>
+            <span>{t("projects_overview_page.title")}</span>
+            <span className="text-12 font-normal text-tertiary">
+              · {totalProjects} / {totalIssues}
+            </span>
           </div>
         </div>
 
-        {/* ── (1,2) Timeline header – sticky top ──────────────────────── */}
+        {/* ── (1,2) Timeline header – sticky top ────────────────────── */}
         <div
           className="border-b border-subtle relative"
           style={{
@@ -255,7 +278,7 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }
           )}
         </div>
 
-        {/* ── (2,1) Sidebar column – sticky left ──────────────────────── */}
+        {/* ── (2,1) Sidebar – sticky left ────────────────────────────── */}
         <div
           className="border-r border-subtle relative"
           style={{
@@ -267,33 +290,66 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }
             gridRow: 2,
           }}
         >
-          {flatRows.map((row, i) => {
-            if (row.type === "group") {
-              return (
-                <div
-                  key={`g-${i}`}
-                  className="absolute left-0 right-0 flex items-center px-3 text-12 font-semibold text-secondary border-b border-subtle"
-                  style={{ top: row.y, height: row.height, backgroundColor: STICKY_BG_ALT }}
-                >
-                  <span className="truncate">{row.group}</span>
-                </div>
-              );
-            }
-            const b = row.block;
+          {visibleRows.map((r) => {
+            const indent = INDENT_BY_LEVEL[Math.min(r.level, INDENT_BY_LEVEL.length - 1)];
+            const isProject = r.node.type === "project";
+            const isMain = r.node.type === "main";
+            const isAlt = !isProject && Math.floor(r.y / 80) % 2 === 1; // simple stripe pattern
             return (
               <div
-                key={b.id}
-                className="absolute left-0 right-0 flex items-center px-4 border-b border-subtle/60"
+                key={r.node.id}
+                className={cn(
+                  "absolute left-0 right-0 flex items-center border-b border-subtle/60 select-none",
+                  r.hasChildren ? "cursor-pointer hover:bg-black/[0.04]" : ""
+                )}
                 style={{
-                  top: row.y,
-                  height: row.height,
-                  backgroundColor: row.isAlt ? "rgba(0,0,0,0.025)" : STICKY_BG,
+                  top: r.y,
+                  height: r.height,
+                  paddingLeft: indent,
+                  paddingRight: 12,
+                  backgroundColor: isProject
+                    ? STICKY_BG_ALT
+                    : isAlt
+                      ? "rgba(0,0,0,0.025)"
+                      : STICKY_BG,
                 }}
+                onClick={() => r.hasChildren && toggle(r.node.id)}
               >
-                <div className="flex flex-col min-w-0 gap-0.5">
-                  <span className="truncate text-13 font-medium text-primary leading-tight">{b.name}</span>
-                  {showSubtitle(b) && (
-                    <span className="truncate text-11 text-tertiary leading-tight">{b.subtitle}</span>
+                {/* chevron */}
+                <div className="flex-shrink-0 w-4 mr-1 flex items-center justify-center">
+                  {r.hasChildren ? (
+                    <ChevronRight
+                      className={cn(
+                        "size-3.5 transition-transform text-tertiary",
+                        r.isExpanded ? "rotate-90" : ""
+                      )}
+                    />
+                  ) : null}
+                </div>
+                <div className="flex flex-col min-w-0 gap-0.5 leading-tight">
+                  <span
+                    className={cn(
+                      "truncate",
+                      isProject
+                        ? "text-13 font-semibold text-primary"
+                        : isMain
+                          ? "text-13 font-medium text-primary"
+                          : "text-12 text-secondary"
+                    )}
+                  >
+                    {r.node.name}
+                  </span>
+                  {!isProject && r.node.subtitle && r.node.subtitle !== r.node.name && (
+                    <span className="truncate text-11 text-tertiary">
+                      {r.node.totalTasks > 1
+                        ? `${r.node.completedTasks}/${r.node.totalTasks} · ${r.node.taskCompletionRate}%`
+                        : ""}
+                    </span>
+                  )}
+                  {isProject && (
+                    <span className="truncate text-11 text-tertiary">
+                      {r.node.completedTasks}/{r.node.totalTasks} · {r.node.taskCompletionRate}%
+                    </span>
                   )}
                 </div>
               </div>
@@ -301,7 +357,7 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }
           })}
         </div>
 
-        {/* ── (2,2) Timeline body ──────────────────────────────────────── */}
+        {/* ── (2,2) Timeline body ─────────────────────────────────────── */}
         <div
           className="relative"
           style={{
@@ -309,23 +365,26 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }
             gridRow: 2,
           }}
         >
-          {/* zebra row backgrounds */}
-          {flatRows.map((row, i) => (
-            <div
-              key={`bg-${i}`}
-              className="absolute left-0 right-0 border-b border-subtle/60"
-              style={{
-                top: row.y,
-                height: row.height,
-                backgroundColor:
-                  row.type === "group"
+          {/* row backgrounds + horizontal separators */}
+          {visibleRows.map((r) => {
+            const isProject = r.node.type === "project";
+            const isAlt = !isProject && Math.floor(r.y / 80) % 2 === 1;
+            return (
+              <div
+                key={`bg-${r.node.id}`}
+                className="absolute left-0 right-0 border-b border-subtle/60"
+                style={{
+                  top: r.y,
+                  height: r.height,
+                  backgroundColor: isProject
                     ? STICKY_BG_ALT
-                    : row.isAlt
+                    : isAlt
                       ? "rgba(0,0,0,0.025)"
                       : "transparent",
-              }}
-            />
-          ))}
+                }}
+              />
+            );
+          })}
 
           {/* vertical grid lines (major ticks) */}
           {ticks.map((tk, i) =>
@@ -347,17 +406,16 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }
           )}
 
           {/* bars */}
-          {flatRows.map((row) => {
-            if (row.type === "group") return null;
-            const b = row.block;
-            const start = b.startDate;
-            const end = b.targetDate ?? b.startDate;
-            const top = row.y + (row.height - BAR_HEIGHT) / 2;
+          {visibleRows.map((r) => {
+            const node = r.node;
+            const start = node.startDate;
+            const end = node.targetDate ?? node.startDate;
+            const top = r.y + (r.height - BAR_HEIGHT) / 2;
 
             if (!start || !end) {
               return (
                 <div
-                  key={b.id}
+                  key={`bar-${node.id}`}
                   className="absolute left-2 text-11 text-tertiary italic"
                   style={{ top: top + 4 }}
                 >
@@ -369,20 +427,21 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }
             const left = daysBetween(windowStart, start) * dayPx;
             const widthDays = Math.max(1, daysBetween(start, end) + 1);
             const width = Math.max(MIN_BAR_WIDTH, widthDays * dayPx);
-            const progressWidth = (width * b.taskCompletionRate) / 100;
-            const tooltip = `${b.name}\n${t("projects_overview_page.tooltip_tasks", {
-              done: b.completedTasks,
-              total: b.totalTasks,
-            })}\n${t("projects_overview_page.tooltip_hours", {
-              done: b.completedHours,
-              total: b.estimateHours,
-            })}`;
-            const showInlineText = width >= 56;
-            const rate = b.taskCompletionRate;
+            const progressWidth = (width * node.taskCompletionRate) / 100;
+            const rate = node.taskCompletionRate;
             const colors = barColors(rate);
+            const showInlineText = width >= 56;
+            const tooltip = `${node.name}\n${t("projects_overview_page.tooltip_tasks", {
+              done: node.completedTasks,
+              total: node.totalTasks,
+            })}\n${t("projects_overview_page.tooltip_hours", {
+              done: node.completedHours,
+              total: node.estimateHours,
+            })}`;
+
             return (
               <div
-                key={b.id}
+                key={`bar-${node.id}`}
                 className="absolute rounded-md overflow-hidden flex items-center shadow-sm"
                 style={{
                   top,
@@ -398,12 +457,16 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }
                 {progressWidth > 0 && (
                   <div
                     className="absolute inset-y-0 left-0"
-                    style={{ width: progressWidth, backgroundColor: colors.fill, opacity: 0.85 }}
+                    style={{
+                      width: progressWidth,
+                      backgroundColor: colors.fill,
+                      opacity: 0.85,
+                    }}
                   />
                 )}
                 {showInlineText && (
                   <span className="relative px-2 text-11 font-semibold truncate text-gray-900">
-                    {b.completedTasks}/{b.totalTasks} · {rate}%
+                    {node.completedTasks}/{node.totalTasks} · {rate}%
                   </span>
                 )}
               </div>
