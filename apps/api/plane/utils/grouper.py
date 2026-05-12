@@ -127,6 +127,11 @@ def issue_on_results(
         "is_draft",
         "archived_at",
         "state__group",
+        # Hours tracking fields
+        "estimate_hours",
+        "actual_hours",
+        "completed_hours",
+        "remaining_hours",
     ]
 
     if group_by in FIELD_MAPPER:
