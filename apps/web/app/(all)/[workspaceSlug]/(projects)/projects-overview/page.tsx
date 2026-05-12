@@ -76,7 +76,7 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
   const { workspaceProjectIds, getProjectById } = useProject();
   const { getProjectStates } = useProjectState();
   const memberRoot = useMember();
-  const { fetchWorkspaceModules, getProjectModuleIds, getModuleById } = useModule();
+  const { fetchWorkspaceModules, fetchModules, getProjectModuleIds, getModuleById } = useModule();
 
   // ensure workspace members are loaded so we can resolve assignee names
   useEffect(() => {
@@ -88,13 +88,23 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
       });
   }, [isAdmin, workspaceSlug, memberRoot]);
 
-  // ensure workspace modules are loaded so we can offer them as filters
+  // ensure modules are loaded so we can offer them as filters.
+  // We try the workspace-level batch endpoint first, then fall back to
+  // per-project fetches so any project not covered still gets its modules.
   useEffect(() => {
     if (!isAdmin || !workspaceSlug) return;
-    fetchWorkspaceModules(workspaceSlug.toString()).catch(() => {
-      /* non-fatal – filter UI will just be empty */
+    const slug = workspaceSlug.toString();
+    fetchWorkspaceModules(slug).catch(() => {
+      /* fall back to per-project below */
     });
-  }, [isAdmin, workspaceSlug, fetchWorkspaceModules]);
+    // Fetch per-project too – fetchedMap[projectId] is needed for
+    // getProjectModuleIds to return non-null results.
+    for (const pid of workspaceProjectIds ?? []) {
+      fetchModules(slug, pid).catch(() => {
+        /* non-fatal */
+      });
+    }
+  }, [isAdmin, workspaceSlug, fetchWorkspaceModules, fetchModules, workspaceProjectIds]);
 
   // local state
   const [step, setStep] = useState<TStep>("loading");
@@ -208,8 +218,13 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
     return out;
   }, [memberRoot, workspaceSlug, issues]);
 
-  // Modules available per project (for the filter UI)
-  const modulesByProject = useMemo(() => {
+  // Modules available per project (for the filter UI).
+  //
+  // NOT memoized: getProjectModuleIds/getModuleById are MobX computedFns whose
+  // references are stable while the underlying store changes, so useMemo would
+  // not re-run when modules finish loading. The component is observer-wrapped,
+  // so reading observables here re-renders correctly when data arrives.
+  const modulesByProject = (() => {
     const m = new Map<string, TModuleOption[]>();
     for (const pid of workspaceProjectIds ?? []) {
       const ids = getProjectModuleIds(pid) ?? [];
@@ -217,12 +232,11 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
         .map((id) => getModuleById(id))
         .filter((mm): mm is NonNullable<typeof mm> => mm != null)
         .map((mm) => ({ id: mm.id, name: mm.name }));
-      // sort modules alphabetically for stable UI
       opts.sort((a, b) => a.name.localeCompare(b.name));
       m.set(pid, opts);
     }
     return m;
-  }, [workspaceProjectIds, getProjectModuleIds, getModuleById]);
+  })();
 
   // Build hierarchical tree (project → main → sub) – filtered by module filter
   const tree: TOverviewNode[] = useMemo(
