@@ -33,6 +33,8 @@ type Props = {
   windowStart: Date;
   windowEnd: Date;
   scale: TTimeScale;
+  /** Human label for the kind of blocks shown (e.g. "主任務"). */
+  modeLabel: string;
 };
 
 // ─── Header ticks ────────────────────────────────────────────────────────────
@@ -92,16 +94,25 @@ function progressColor(rate: number): string {
   return "bg-rose-400";
 }
 
-function progressTextColor(rate: number): string {
-  if (rate >= 80) return "text-emerald-700 dark:text-emerald-300";
-  if (rate >= 50) return "text-blue-700 dark:text-blue-300";
-  if (rate >= 20) return "text-amber-700 dark:text-amber-300";
-  return "text-rose-700 dark:text-rose-300";
+/** Background of the bar "track" – visible even when there's no progress fill. */
+function barTrackBg(rate: number): string {
+  if (rate >= 80) return "bg-emerald-100/60 dark:bg-emerald-900/30";
+  if (rate >= 50) return "bg-blue-100/60 dark:bg-blue-900/30";
+  if (rate >= 20) return "bg-amber-100/60 dark:bg-amber-900/30";
+  return "bg-rose-100/60 dark:bg-rose-900/30";
+}
+
+/** Colored left edge of the bar – always visible as a 3px stripe. */
+function barAccent(rate: number): string {
+  if (rate >= 80) return "border-emerald-500";
+  if (rate >= 50) return "border-blue-500";
+  if (rate >= 20) return "border-amber-500";
+  return "border-rose-400";
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
+export function SimpleGantt({ blocks, windowStart, windowEnd, scale, modeLabel }: Props) {
   const { t } = useTranslation();
   const dayPx = pxPerDay(scale);
   const totalDays = Math.max(1, daysBetween(windowStart, windowEnd) + 1);
@@ -188,8 +199,8 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
           style={{ height: HEADER_HEIGHT }}
         >
           <div className="flex items-baseline gap-2">
-            <span>{t("projects_overview_page.title")}</span>
-            <span className="text-11 font-normal text-tertiary">{blocks.length}</span>
+            <span>{modeLabel}</span>
+            <span className="text-12 font-normal text-tertiary">· {blocks.length}</span>
           </div>
         </div>
         {/* sidebar body */}
@@ -212,7 +223,7 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
                 key={b.id}
                 className={cn(
                   "absolute left-0 right-0 flex items-center px-4 border-b border-subtle/60",
-                  row.isAlt ? "bg-surface-1" : "bg-surface-2/30"
+                  row.isAlt ? "bg-black/[0.025] dark:bg-white/[0.025]" : ""
                 )}
                 style={{ top: row.y, height: row.height }}
               >
@@ -283,8 +294,8 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
                   row.type === "group"
                     ? "bg-surface-2/80"
                     : row.isAlt
-                      ? "bg-surface-1"
-                      : "bg-surface-2/30"
+                      ? "bg-black/[0.025] dark:bg-white/[0.025]"
+                      : ""
                 )}
                 style={{ top: row.y, height: row.height }}
               />
@@ -342,28 +353,27 @@ export function SimpleGantt({ blocks, windowStart, windowEnd, scale }: Props) {
               })}`;
               const showInlineText = width >= 56;
 
+              const rate = b.taskCompletionRate;
               return (
                 <div
                   key={b.id}
                   className={cn(
-                    "absolute rounded-md border overflow-hidden flex items-center shadow-sm",
-                    "bg-surface-3/70 border-subtle"
+                    "absolute rounded-md overflow-hidden flex items-center shadow-sm border-l-[3px]",
+                    barTrackBg(rate),
+                    barAccent(rate)
                   )}
                   style={{ top, left, width, height: BAR_HEIGHT }}
                   title={tooltip}
                 >
-                  <div
-                    className={cn("absolute inset-y-0 left-0 rounded-l-md", progressColor(b.taskCompletionRate))}
-                    style={{ width: progressWidth, opacity: 0.45 }}
-                  />
+                  {progressWidth > 0 && (
+                    <div
+                      className={cn("absolute inset-y-0 left-0", progressColor(rate))}
+                      style={{ width: progressWidth, opacity: 0.7 }}
+                    />
+                  )}
                   {showInlineText && (
-                    <span
-                      className={cn(
-                        "relative px-2 text-11 font-semibold truncate",
-                        progressTextColor(b.taskCompletionRate)
-                      )}
-                    >
-                      {b.completedTasks}/{b.totalTasks} · {b.taskCompletionRate}%
+                    <span className="relative px-2 text-11 font-semibold truncate text-primary">
+                      {b.completedTasks}/{b.totalTasks} · {rate}%
                     </span>
                   )}
                 </div>

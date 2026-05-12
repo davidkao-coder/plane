@@ -75,6 +75,16 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
   const { getProjectStates } = useProjectState();
   const memberRoot = useMember();
 
+  // ensure workspace members are loaded so we can resolve assignee names
+  useEffect(() => {
+    if (!isAdmin || !workspaceSlug) return;
+    memberRoot.workspace
+      .fetchWorkspaceMembers(workspaceSlug.toString())
+      .catch(() => {
+        /* non-fatal – we'll fall back to user IDs */
+      });
+  }, [isAdmin, workspaceSlug, memberRoot]);
+
   // local state
   const [step, setStep] = useState<TStep>("loading");
   const [errorMsg, setErrorMsg] = useState("");
@@ -154,18 +164,29 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
     return out;
   }, [workspaceProjectIds, getProjectStates]);
 
+  // Build the member list from:
+  //   1. workspace member IDs (preferred – includes inactive assignees)
+  //   2. distinct assignee_ids in fetched issues (covers any user the store missed)
   const members: IUserLite[] = useMemo(() => {
-    const ids = memberRoot.workspace.getWorkspaceMemberIds(workspaceSlug?.toString() ?? "") ?? [];
-    const out: IUserLite[] = [];
     const seen = new Set<string>();
-    for (const id of ids) {
-      if (seen.has(id)) continue;
+    const out: IUserLite[] = [];
+    const wsIds = memberRoot.workspace.getWorkspaceMemberIds(workspaceSlug?.toString() ?? "") ?? [];
+    for (const id of wsIds) {
+      if (!id || seen.has(id)) continue;
       seen.add(id);
       const u = memberRoot.getUserDetails(id);
       if (u) out.push(u);
     }
+    for (const issue of issues) {
+      for (const id of issue.assignee_ids ?? []) {
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        const u = memberRoot.getUserDetails(id);
+        if (u) out.push(u);
+      }
+    }
     return out;
-  }, [memberRoot, workspaceSlug]);
+  }, [memberRoot, workspaceSlug, issues]);
 
   // compute blocks + member loading
   const blocks: TOverviewBlock[] = useMemo(
@@ -220,6 +241,13 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
                   windowStart={dateWindow.start}
                   windowEnd={dateWindow.end}
                   scale={scale}
+                  modeLabel={t(
+                    mode === "project"
+                      ? "projects_overview_page.view_project"
+                      : mode === "main"
+                        ? "projects_overview_page.view_main_task"
+                        : "projects_overview_page.view_sub_task"
+                  )}
                 />
               )}
             </div>
