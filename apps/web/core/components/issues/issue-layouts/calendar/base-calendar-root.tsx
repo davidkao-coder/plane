@@ -31,7 +31,8 @@ export type CalendarStoreType =
   | EIssuesStoreType.PROJECT_VIEW
   | EIssuesStoreType.TEAM
   | EIssuesStoreType.TEAM_VIEW
-  | EIssuesStoreType.EPIC;
+  | EIssuesStoreType.EPIC
+  | EIssuesStoreType.PROFILE;
 
 interface IBaseCalendarRoot {
   QuickActions: FC<IQuickActionProps>;

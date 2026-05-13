@@ -12,8 +12,8 @@ import useSWR from "swr";
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
 import { EIssuesStoreType } from "@plane/types";
 // components
+import { ProfileIssuesCalendarLayout } from "@/components/issues/issue-layouts/calendar/roots/profile-issues-root";
 import { ProfileIssuesKanBanLayout } from "@/components/issues/issue-layouts/kanban/roots/profile-issues-root";
-import { ProfileIssuesListLayout } from "@/components/issues/issue-layouts/list/roots/profile-issues-root";
 import { IssuePeekOverview } from "@/components/issues/peek-overview";
 import { WorkspaceLevelWorkItemFiltersHOC } from "@/components/work-item-filters/filters-hoc/workspace-level";
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
@@ -65,8 +65,12 @@ export const ProfileIssuesPage = observer(function ProfileIssuesPage(props: Prop
             <div className="flex h-full w-full flex-col">
               {profileWorkItemsFilter && <WorkItemFiltersRow filter={profileWorkItemsFilter} />}
               <div className="relative h-full w-full overflow-auto">
-                {/* Profile page only supports Kanban; old "list" preferences fall back here. */}
-                <ProfileIssuesKanBanLayout />
+                {activeLayout === "calendar" ? (
+                  <ProfileIssuesCalendarLayout />
+                ) : (
+                  // Default fallback (covers kanban and any legacy "list" preference)
+                  <ProfileIssuesKanBanLayout />
+                )}
               </div>
             </div>
             {/* peek overview */}
