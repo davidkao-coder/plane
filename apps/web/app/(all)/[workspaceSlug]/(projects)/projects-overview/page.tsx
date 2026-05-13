@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, FilterX } from "lucide-react";
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import type { IState, IUserLite, TIssue } from "@plane/types";
@@ -262,6 +262,17 @@ function ProjectsOverviewPage({ params }: Route.ComponentProps) {
       <div className="flex h-full w-full flex-col gap-4 overflow-y-auto p-4">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-end gap-2">
+          {moduleFilters.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setModuleFilters(new Map())}
+              className="inline-flex items-center gap-1 rounded-md border border-subtle bg-surface-1 px-2.5 py-1 text-12 font-medium text-secondary hover:bg-black/[0.04] dark:hover:bg-white/[0.04]"
+              title={t("projects_overview_page.clear_all_filters")}
+            >
+              <FilterX className="size-3.5" />
+              <span>{t("projects_overview_page.clear_all_filters")}</span>
+            </button>
+          )}
           <ScaleToggle value={scale} onChange={setScale} />
         </div>
 

@@ -335,6 +335,7 @@ export default {
     filter_modules: "依模組過濾",
     clear: "清除",
     no_modules: "此專案沒有模組",
+    clear_all_filters: "清除所有過濾",
   },
   settings: "設定",
   failed_to_move_favorite: "無法移動我的最愛",

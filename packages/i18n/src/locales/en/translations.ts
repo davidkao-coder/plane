@@ -179,6 +179,7 @@ export default {
     filter_modules: "Filter by module",
     clear: "Clear",
     no_modules: "No modules in this project",
+    clear_all_filters: "Clear all filters",
   },
   settings: "Settings",
   failed_to_move_favorite: "Failed to move favorite",

@@ -551,8 +551,12 @@ export function computeOverviewTree(
       if (tt && (!maxTarget || tt > maxTarget)) maxTarget = tt;
     }
 
-    // skip empty projects after filtering (no matching issues at all)
-    if (mainNodes.length === 0 && totalCount === 0) continue;
+    // Keep the project row visible even when the filter excludes everything:
+    // users need to see the project to know what they filtered, and to clear.
+    // Only skip projects that have no issues at all (i.e. project is empty
+    // regardless of filter).
+    const hasAnyIssue = b.mains.length > 0 || b.subs.length > 0;
+    if (!hasAnyIssue) continue;
 
     projectNodes.push({
       id: projectId,
