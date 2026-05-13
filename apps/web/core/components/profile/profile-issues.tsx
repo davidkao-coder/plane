@@ -65,11 +65,8 @@ export const ProfileIssuesPage = observer(function ProfileIssuesPage(props: Prop
             <div className="flex h-full w-full flex-col">
               {profileWorkItemsFilter && <WorkItemFiltersRow filter={profileWorkItemsFilter} />}
               <div className="relative h-full w-full overflow-auto">
-                {activeLayout === "list" ? (
-                  <ProfileIssuesListLayout />
-                ) : activeLayout === "kanban" ? (
-                  <ProfileIssuesKanBanLayout />
-                ) : null}
+                {/* Profile page only supports Kanban; old "list" preferences fall back here. */}
+                <ProfileIssuesKanBanLayout />
               </div>
             </div>
             {/* peek overview */}
