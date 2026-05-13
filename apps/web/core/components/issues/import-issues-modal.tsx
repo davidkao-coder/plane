@@ -426,10 +426,17 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
                   <p className="text-xs font-medium text-yellow-600 mb-1">
                     {t("issue.import.result_warning", { count: parseResult.warnings.length })}
                   </p>
-                  <ul className="space-y-0.5 max-h-24 overflow-y-auto">
-                    {parseResult.warnings.slice(0, 10).map((w, i) => (
-                      <li key={i} className="text-xs text-yellow-600/80">• {w.message}</li>
-                    ))}
+                  <ul className="space-y-0.5 max-h-40 overflow-y-auto">
+                    {parseResult.warnings.slice(0, 10).map((w, i) => {
+                      // message is in "warning_xxx:value" format → split and i18n-render
+                      const [key, ...rest] = w.message.split(":");
+                      const value = rest.join(":");
+                      return (
+                        <li key={i} className="text-xs text-yellow-600/80">
+                          • {t(`issue.import.${key}` as any, { row: w.row, value })}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
