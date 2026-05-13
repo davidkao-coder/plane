@@ -142,6 +142,11 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
 
     const richFilters: TWorkItemFilterExpression = _filters?.rich_filters;
     const displayFilters: IIssueDisplayFilterOptions = this.computedDisplayFilters(_filters?.display_filters);
+    // 「您的工作」預設要顯示子任務 – 多數使用者的指派以子任務為主，
+    // Plane 預設 sub_issue=false 會把這些藏起來造成清單空白。
+    if (_filters?.display_filters?.sub_issue == null) {
+      displayFilters.sub_issue = true;
+    }
     const displayProperties: IIssueDisplayProperties = this.computedDisplayProperties(_filters?.display_properties);
     const kanbanFilters = {
       group_by: _filters?.kanban_filters?.group_by || [],
