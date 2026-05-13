@@ -49,6 +49,8 @@ export type TMappedIssue = {
   priority: TIssuePriorities;
   assignee_ids: string[];
   label_ids: string[];
+  /** Raw label names that don't exist yet in the project – will be auto-created in the import phase. */
+  unresolvedLabelNames: string[];
   module_ids: string[];
   start_date: string | null;
   target_date: string | null;
@@ -68,6 +70,8 @@ export type TParseResult = {
   standalone: TMappedIssue[]; // standalone issues (no sub-task)
   warnings: TImportWarning[];
   errors: TImportError[];
+  /** Distinct label names that aren't in the project yet and will be auto-created. */
+  labelsToCreate: string[];
 };
 
 // ─── Priority map ───────────────────────────────────────────────────────────
@@ -357,14 +361,19 @@ export function mapRowsToIssues(
       }
     });
 
-    // Labels
+    // Labels – existing ones become label_ids immediately; unknown ones are
+    // collected into unresolvedLabelNames and will be auto-created by the
+    // import phase. Caller can then merge the new label IDs back in.
     const labelIds: string[] = [];
+    const unresolvedLabelNames: string[] = [];
     r.labelRaw.forEach((raw) => {
-      const found = labelByName.get(raw.toLowerCase());
+      const trimmed = raw.trim();
+      if (!trimmed) return;
+      const found = labelByName.get(trimmed.toLowerCase());
       if (found) {
         labelIds.push(found.id);
       } else {
-        warnings.push({ row: r.rowIndex, field: "label", message: `warning_label:${raw}` });
+        unresolvedLabelNames.push(trimmed);
       }
     });
 
@@ -387,6 +396,7 @@ export function mapRowsToIssues(
       priority,
       assignee_ids: assigneeIds,
       label_ids: labelIds,
+      unresolvedLabelNames,
       module_ids: moduleIds,
       start_date: r.startDate,
       target_date: r.dueDate,
@@ -442,5 +452,21 @@ export function mapRowsToIssues(
     }
   });
 
-  return { parents, children, standalone, warnings, errors };
+  // Collect all distinct label names that need to be created (across parents,
+  // children and standalone issues). Case-insensitive dedup.
+  const labelToCreateSet = new Map<string, string>(); // lowercase → original casing
+  const collectFrom = (list: TMappedIssue[]) => {
+    for (const m of list) {
+      for (const name of m.unresolvedLabelNames) {
+        const key = name.toLowerCase();
+        if (!labelToCreateSet.has(key)) labelToCreateSet.set(key, name);
+      }
+    }
+  };
+  collectFrom(parents);
+  collectFrom(children);
+  collectFrom(standalone);
+  const labelsToCreate = [...labelToCreateSet.values()];
+
+  return { parents, children, standalone, warnings, errors, labelsToCreate };
 }

@@ -1013,6 +1013,7 @@ export default {
       warning_state: "第 {row} 列：找不到狀態「{value}」，已使用預設狀態",
       warning_member: "第 {row} 列：找不到成員「{value}」，已跳過",
       warning_label: "第 {row} 列：找不到標籤「{value}」，已跳過",
+      info_label_created: "已自動建立標籤「{value}」",
       warning_date: "第 {row} 列：欄位「{col}」的日期格式不正確「{value}」，已跳過",
       error_no_title: "第 {row} 列：主任務標題為空，已跳過",
       error_missing_fields: "第 {row} 列：以下必填欄位為空：{fields}，已跳過",

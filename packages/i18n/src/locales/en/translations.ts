@@ -863,6 +863,7 @@ export default {
       result_failed: "{count} items failed",
       warning_state: "Row {row}: State \"{value}\" not found, using default state",
       warning_member: "Row {row}: Member \"{value}\" not found, skipped",
+      info_label_created: "Auto-created label \"{value}\"",
       warning_label: "Row {row}: Label \"{value}\" not found, skipped",
       warning_date: "Row {row}: Invalid date \"{value}\" in column \"{col}\", skipped",
       error_missing_fields: "Row {row}: missing required fields: {fields}, skipped",

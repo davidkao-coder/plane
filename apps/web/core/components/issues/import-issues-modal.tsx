@@ -64,7 +64,7 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
   // store hooks
   const { getProjectById } = useProject();
   const { getProjectStates } = useProjectState();
-  const { getProjectLabels } = useLabel();
+  const { getProjectLabels, createLabel } = useLabel();
   const { getUserDetails, project: { getProjectMemberIds } } = useMember();
   const { getProjectModuleIds, getModuleById } = useModule();
   const { issues: projectIssues } = useIssues(EIssuesStoreType.PROJECT);
@@ -144,6 +144,43 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
       errorMessages: parseResult.errors.map((e) => `Row ${e.row}: ${t(`issue.import.${e.message}` as any)}`),
     };
 
+    // ─── Step 0: Auto-create missing labels ─────────────────────────────────
+    // Pre-create any labels referenced in the Excel that don't exist in the
+    // project yet, then merge the new label IDs back into each mapped issue's
+    // label_ids before issue creation.
+    const labelNameToId = new Map<string, string>(); // lowercase → id
+    if (parseResult.labelsToCreate.length > 0) {
+      for (const name of parseResult.labelsToCreate) {
+        try {
+          const created = await createLabel(workspaceSlug, projectId, { name });
+          if (created?.id) {
+            labelNameToId.set(name.toLowerCase(), created.id);
+            result.warningMessages.push(`info_label_created:${name}`);
+          }
+        } catch {
+          // creating a label could fail (e.g. duplicate race). Try to find an
+          // existing label with this name from the freshly-updated store.
+          const refreshed = getProjectLabels(projectId) ?? [];
+          const found = refreshed.find((l) => l.name.toLowerCase() === name.toLowerCase());
+          if (found) labelNameToId.set(name.toLowerCase(), found.id);
+        }
+      }
+    }
+
+    // Merge the new label IDs back into each mapped issue
+    const mergeLabels = (issue: TMappedIssue): TMappedIssue => {
+      if (!issue.unresolvedLabelNames.length) return issue;
+      const extras: string[] = [];
+      for (const name of issue.unresolvedLabelNames) {
+        const id = labelNameToId.get(name.toLowerCase());
+        if (id && !issue.label_ids.includes(id)) extras.push(id);
+      }
+      return { ...issue, label_ids: [...issue.label_ids, ...extras] };
+    };
+    const mergedParents = parseResult.parents.map(mergeLabels);
+    const mergedChildren = parseResult.children.map(mergeLabels);
+    const mergedStandalone = parseResult.standalone.map(mergeLabels);
+
     // Map parentName → created issue id
     const parentIdMap = new Map<string, string>();
 
@@ -178,19 +215,19 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
     };
 
     // 1. Create parent issues
-    for (const parent of parseResult.parents) {
+    for (const parent of mergedParents) {
       const id = await createOne(parent);
       if (id) parentIdMap.set(parent.name, id);
     }
 
     // 2. Create children
-    for (const child of parseResult.children) {
+    for (const child of mergedChildren) {
       const parentId = parentIdMap.get(child.parentName);
       await createOne(child, parentId);
     }
 
     // 3. Create standalone
-    for (const solo of parseResult.standalone) {
+    for (const solo of mergedStandalone) {
       await createOne(solo);
     }
 
@@ -493,6 +530,23 @@ export const ImportIssuesModal = observer(function ImportIssuesModal(props: Prop
                   </div>
                 )}
               </div>
+
+              {/* Detailed warning / info messages */}
+              {importResult.warningMessages.length > 0 && (
+                <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3">
+                  <ul className="space-y-0.5 max-h-40 overflow-y-auto">
+                    {importResult.warningMessages.slice(0, 20).map((m, i) => {
+                      const [key, ...rest] = m.split(":");
+                      const value = rest.join(":");
+                      return (
+                        <li key={i} className="text-xs text-yellow-600/80">
+                          • {t(`issue.import.${key}` as any, { value })}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>
