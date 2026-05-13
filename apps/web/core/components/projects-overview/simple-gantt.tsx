@@ -214,6 +214,8 @@ export function SimpleGantt({
 
   const totalProjects = tree.length;
   const totalIssues = tree.reduce((s, p) => s + p.totalTasks, 0);
+  const totalCompleted = tree.reduce((s, p) => s + p.completedTasks, 0);
+  const overallRate = totalIssues > 0 ? Math.round((totalCompleted / totalIssues) * 1000) / 10 : 0;
 
   return (
     <div
@@ -242,10 +244,15 @@ export function SimpleGantt({
             gridRow: 1,
           }}
         >
-          <div className="flex items-baseline gap-2">
+          <div className="flex flex-col leading-tight">
             <span>{t("projects_overview_page.title")}</span>
-            <span className="text-12 font-normal text-tertiary">
-              · {totalProjects} / {totalIssues}
+            <span className="text-11 font-normal text-tertiary">
+              {t("projects_overview_page.summary_count", {
+                projects: totalProjects,
+                issues: totalIssues,
+              })}
+              {" · "}
+              {totalCompleted}/{totalIssues} · {overallRate}%
             </span>
           </div>
         </div>

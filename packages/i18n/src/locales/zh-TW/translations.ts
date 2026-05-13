@@ -336,6 +336,7 @@ export default {
     clear: "清除",
     no_modules: "此專案沒有模組",
     clear_all_filters: "清除所有過濾",
+    summary_count: "{projects} 個專案 · {issues} 個任務",
   },
   settings: "設定",
   failed_to_move_favorite: "無法移動我的最愛",

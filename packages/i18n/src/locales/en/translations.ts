@@ -180,6 +180,7 @@ export default {
     clear: "Clear",
     no_modules: "No modules in this project",
     clear_all_filters: "Clear all filters",
+    summary_count: "{projects} projects · {issues} issues",
   },
   settings: "Settings",
   failed_to_move_favorite: "Failed to move favorite",
