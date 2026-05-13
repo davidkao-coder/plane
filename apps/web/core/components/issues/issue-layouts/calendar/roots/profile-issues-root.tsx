@@ -15,7 +15,7 @@ import { ProjectIssueQuickActions } from "../../quick-action-dropdowns";
 import { BaseCalendarRoot } from "../base-calendar-root";
 
 export const ProfileIssuesCalendarLayout = observer(function ProfileIssuesCalendarLayout() {
-  const { workspaceSlug } = useParams();
+  const { workspaceSlug, profileViewId } = useParams();
   const { allowPermissions } = useUserPermissions();
 
   const canEditPropertiesBasedOnProject = (projectId: string) =>
@@ -30,6 +30,7 @@ export const ProfileIssuesCalendarLayout = observer(function ProfileIssuesCalend
     <BaseCalendarRoot
       QuickActions={ProjectIssueQuickActions}
       canEditPropertiesBasedOnProject={canEditPropertiesBasedOnProject}
+      viewId={profileViewId?.toString()}
     />
   );
 });
