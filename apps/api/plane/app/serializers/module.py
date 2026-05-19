@@ -231,6 +231,7 @@ class ModuleSerializer(DynamicBaseSerializer):
             "target_date",
             "status",
             "lead_id",
+            "stage_id",  # TMS – Stage parent
             "member_ids",
             "view_props",
             "sort_order",

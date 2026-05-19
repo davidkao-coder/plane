@@ -83,6 +83,7 @@ class UserMeSerializer(BaseSerializer):
             "is_email_verified",
             "last_login_medium",
             "last_login_time",
+            "role",  # TMS – manager / member
         ]
         read_only_fields = fields
 
@@ -166,6 +167,7 @@ class UserAdminLiteSerializer(BaseSerializer):
             "display_name",
             "email",
             "last_login_medium",
+            "role",  # TMS – manager / member
         ]
         read_only_fields = ["id", "is_bot"]
 

@@ -394,6 +394,18 @@ export const coreRoutes: RouteConfigEntry[] = [
   // → /:workspaceSlug/projects/:projectId/intake
   route(":workspaceSlug/projects/:projectId/inbox", "routes/redirects/core/inbox.tsx"),
 
+  // Category aliases (UI rename of Module – URL accepts both spellings)
+  // /:workspaceSlug/projects/:projectId/categories(/:moduleId)
+  // → /:workspaceSlug/projects/:projectId/modules(/:moduleId)
+  route(
+    ":workspaceSlug/projects/:projectId/categories",
+    "routes/redirects/core/category-list.tsx"
+  ),
+  route(
+    ":workspaceSlug/projects/:projectId/categories/:moduleId",
+    "routes/redirects/core/category-detail.tsx"
+  ),
+
   // Sign-up redirects
   route("accounts/sign-up", "routes/redirects/core/accounts-signup.tsx"),
 

@@ -32,6 +32,9 @@ export interface IUserLite {
   last_name: string;
   joining_date?: string;
 }
+/** TMS per-user role — distinct from workspace role (Admin/Member/Guest). */
+export type TUserRole = "member" | "manager";
+
 export interface IUser extends IUserLite {
   // only for uploading the cover image
   cover_image_asset?: string | null;
@@ -50,6 +53,8 @@ export interface IUser extends IUserLite {
   username: string;
   last_login_medium: TLoginMediums;
   theme: IUserTheme;
+  /** TMS – manager bypasses daily work-log requirement. */
+  role: TUserRole;
 }
 
 export interface IUserAccount {

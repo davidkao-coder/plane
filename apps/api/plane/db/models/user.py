@@ -53,6 +53,18 @@ class BotTypeEnum(models.TextChoices):
     WORKSPACE_SEED = "WORKSPACE_SEED", "Workspace Seed"
 
 
+class UserRoleEnum(models.TextChoices):
+    """Per-user role flag used by the TMS customization.
+
+    Distinct from Workspace membership role (Admin/Member/Guest). This is a
+    personal attribute that applies across every workspace the user belongs
+    to. Managers are exempt from the daily work-log requirement.
+    """
+
+    MEMBER = "member", "Member"
+    MANAGER = "manager", "Manager"
+
+
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True, primary_key=True)
     username = models.CharField(max_length=128, unique=True)
@@ -114,6 +126,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     is_bot = models.BooleanField(default=False)
     bot_type = models.CharField(max_length=30, verbose_name="Bot Type", blank=True, null=True)
+
+    # TMS customization – per-user role (manager bypasses work-log requirement)
+    role = models.CharField(
+        max_length=20,
+        choices=UserRoleEnum.choices,
+        default=UserRoleEnum.MEMBER,
+        verbose_name="User Role",
+    )
 
     # timezone
     USER_TIMEZONE_CHOICES = tuple(zip(pytz.common_timezones, pytz.common_timezones))

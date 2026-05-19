@@ -17,7 +17,7 @@ export default {
     analytics: "分析",
     work_items: "工作項目",
     cycles: "週期",
-    modules: "模組",
+    modules: "分類",
     intake: "接收",
     drafts: "草稿",
     favorites: "收藏",
@@ -224,7 +224,7 @@ export default {
   create_workspace: "建立工作區",
   invitations: "邀請",
   summary: "摘要",
-  assigned: "已指派",
+  assigned: "被指派",
   created: "已建立",
   subscribed: "已訂閱",
   you_do_not_have_the_permission_to_access_this_page: "您沒有權限存取此頁面。",
@@ -332,9 +332,9 @@ export default {
     today: "今日",
     no_assignee: "（未指派）",
     no_module: "（未分組）",
-    filter_modules: "依模組過濾",
+    filter_modules: "依分類過濾",
     clear: "清除",
-    no_modules: "此專案沒有模組",
+    no_modules: "此專案沒有分類",
     clear_all_filters: "清除所有過濾",
     summary_count: "{projects} 個專案 · {issues} 個任務",
   },
@@ -404,7 +404,7 @@ export default {
   open_project: "開啟專案",
   issues: "工作事項",
   cycles: "週期",
-  modules: "模組",
+  modules: "分類",
   pages: "頁面",
   intake: "進件",
   time_tracking: "時間追蹤",
@@ -681,8 +681,8 @@ export default {
     project: "專案",
     cycle: "週期",
     cycles: "週期",
-    module: "模組",
-    modules: "模組",
+    module: "分類",
+    modules: "分類",
     labels: "標籤",
     label: "標籤",
     assignees: "指派對象",
@@ -1033,7 +1033,7 @@ export default {
       column_actual_hours: "實際工時",
       column_completed_hours: "已完成工時",
       column_remaining_hours: "剩餘工時",
-      column_modules: "模組",
+      column_modules: "分類",
       download_template: "下載範本",
     },
     export: {
@@ -1045,7 +1045,7 @@ export default {
       section_hours: "工時統計",
       section_risk: "風險管控",
       section_members: "成員工時",
-      section_modules: "模組進度",
+      section_modules: "分類進度",
       total_issues: "任務總數",
       completed_issues: "已完成",
       in_progress_issues: "進行中",
@@ -1063,9 +1063,9 @@ export default {
       risk_high_priority: "高優先級未完成",
       member_name: "成員",
       issue_count: "任務數",
-      module_name: "模組",
+      module_name: "分類",
       module_completed: "已完成",
-      no_module: "（未指定模組）",
+      no_module: "（未指定分類）",
       no_data: "無資料",
     },
     label: "{count, plural, one {工作事項} other {工作事項}}",
@@ -1100,9 +1100,9 @@ export default {
         failed: "無法從週期移除工作事項。請再試一次。",
       },
       module: {
-        loading: "正在從模組移除工作事項",
-        success: "已成功從模組移除工作事項。",
-        failed: "無法從模組移除工作事項。請再試一次。",
+        loading: "正在從分類移除工作事項",
+        success: "已成功從分類移除工作事項。",
+        failed: "無法從分類移除工作事項。請再試一次。",
       },
       parent: {
         label: "移除父工作事項",
@@ -1447,7 +1447,7 @@ export default {
     selected_projects: "已選取的專案",
     total_members: "成員總數",
     total_cycles: "週期總數",
-    total_modules: "模組總數",
+    total_modules: "分類總數",
     pending_work_items: {
       title: "待處理工作事項",
       empty_state: "在此顯示同事待處理工作事項的分析。",
@@ -1487,9 +1487,9 @@ export default {
         primary_button: {
           text: "開始您的第一個專案",
           comic: {
-            title: "分析功能在週期 + 模組中效果最佳",
+            title: "分析功能在週期 + 分類中效果最佳",
             description:
-              "首先，將您的問題在週期中進行時間限制，如果可能的話，將跨越多個週期的問題分組到模組中。在左側導覽中查看這兩個功能。",
+              "首先，將您的問題在週期中進行時間限制，如果可能的話，將跨越多個週期的問題分組到分類中。在左側導覽中查看這兩個功能。",
           },
         },
       },
@@ -1532,7 +1532,7 @@ export default {
     error: {
       permission: "您沒有執行此操作的權限。",
       cycle_delete: "無法刪除週期",
-      module_delete: "無法刪除模組",
+      module_delete: "無法刪除分類",
       issue_delete: "無法刪除工作事項",
     },
     state: {
@@ -1559,7 +1559,7 @@ export default {
       general: {
         title: "沒有使用中的專案",
         description:
-          "請將每個專案視為目標導向工作的上層。專案是工作、週期和模組所在的地方，並與您的同事一起協助您達成目標。建立新專案或篩選已封存的專案。",
+          "請將每個專案視為目標導向工作的上層。專案是工作、週期和分類所在的地方，並與您的同事一起協助您達成目標。建立新專案或篩選已封存的專案。",
         primary_button: {
           text: "開始您的第一個專案",
           comic: {
@@ -1862,7 +1862,7 @@ export default {
       workload: "工作量",
       overview: "概覽",
       created: "已建立的工作事項",
-      assigned: "已指派的工作事項",
+      assigned: "被指派的工作事項",
       subscribed: "已訂閱的工作事項",
       state_distribution: {
         title: "依狀態分類的工作事項",
@@ -1888,7 +1888,7 @@ export default {
     },
     tabs: {
       summary: "摘要",
-      assigned: "已指派",
+      assigned: "被指派",
       created: "已建立",
       subscribed: "已訂閱",
       activity: "活動",
@@ -2078,11 +2078,11 @@ export default {
         toggle_description: "在集中的時間段內規劃工作。",
       },
       modules: {
-        title: "模組",
-        short_title: "模組",
+        title: "分類",
+        short_title: "分類",
         description: "將工作組織成具有專門負責人和受讓人的子專案。",
-        toggle_title: "啟用模組",
-        toggle_description: "專案成員將能夠建立和編輯模組。",
+        toggle_title: "啟用分類",
+        toggle_description: "專案成員將能夠建立和編輯分類。",
       },
       views: {
         title: "檢視",
@@ -2264,28 +2264,28 @@ export default {
     },
   },
   project_module: {
-    add_module: "新增模組",
-    update_module: "更新模組",
-    create_module: "建立模組",
-    archive_module: "封存模組",
-    restore_module: "還原模組",
-    delete_module: "刪除模組",
+    add_module: "新增分類",
+    update_module: "更新分類",
+    create_module: "建立分類",
+    archive_module: "封存分類",
+    restore_module: "還原分類",
+    delete_module: "刪除分類",
     empty_state: {
       general: {
-        title: "將您的專案里程碑對應到模組並輕鬆追蹤彙總工作。",
+        title: "將您的專案里程碑對應到分類並輕鬆追蹤彙總工作。",
         description:
-          "屬於邏輯、階層式上層的一組工作事項形成一個模組。將其視為一種依專案里程碑追蹤工作的方式。它們有自己的期間和截止日期以及分析，可協助您了解您距離里程碑有多近或多遠。",
+          "屬於邏輯、階層式上層的一組工作事項形成一個分類。將其視為一種依專案里程碑追蹤工作的方式。它們有自己的期間和截止日期以及分析，可協助您了解您距離里程碑有多近或多遠。",
         primary_button: {
-          text: "建立您的第一個模組",
+          text: "建立您的第一個分類",
           comic: {
-            title: "模組協助依階層結構分組工作。",
-            description: "購物車模組、底盤模組和倉庫模組都是這種分組的好例子。",
+            title: "分類協助依階層結構分組工作。",
+            description: "購物車分類、底盤分類和倉庫分類都是這種分組的好例子。",
           },
         },
       },
       no_issues: {
-        title: "模組中沒有工作事項",
-        description: "建立或新增您想要作為此模組一部分完成的工作事項",
+        title: "分類中沒有工作事項",
+        description: "建立或新增您想要作為此分類一部分完成的工作事項",
         primary_button: {
           text: "建立新工作事項",
         },
@@ -2294,26 +2294,26 @@ export default {
         },
       },
       archived: {
-        title: "尚無已封存的模組",
-        description: "為了整理您的專案，可以封存已完成或取消的模組。一旦封存，您可以在這裡找到它們。",
+        title: "尚無已封存的分類",
+        description: "為了整理您的專案，可以封存已完成或取消的分類。一旦封存，您可以在這裡找到它們。",
       },
       sidebar: {
-        in_active: "此模組尚未啟用。",
+        in_active: "此分類尚未啟用。",
         invalid_date: "日期無效。請輸入有效日期。",
       },
     },
     quick_actions: {
-      archive_module: "封存模組",
-      archive_module_description: "只有已完成或取消的\n模組可以封存。",
-      delete_module: "刪除模組",
+      archive_module: "封存分類",
+      archive_module_description: "只有已完成或取消的\n分類可以封存。",
+      delete_module: "刪除分類",
     },
     toast: {
       copy: {
-        success: "模組連結已複製到剪貼簿",
+        success: "分類連結已複製到剪貼簿",
       },
       delete: {
-        success: "模組刪除成功",
-        error: "刪除模組失敗",
+        success: "分類刪除成功",
+        error: "刪除分類失敗",
       },
     },
   },
@@ -2490,8 +2490,8 @@ export default {
         },
       },
       module: {
-        title: "模組未啟用於此專案。",
-        description: "模組是專案的基本組成部分。從專案設定啟用模組以開始使用。",
+        title: "分類未啟用於此專案。",
+        description: "分類是專案的基本組成部分。從專案設定啟用分類以開始使用。",
         primary_button: {
           text: "管理功能",
         },
@@ -2599,7 +2599,7 @@ export default {
     },
     member: {
       title: "成員",
-      description: "在專案、週期和模組內具有讀取、寫入、編輯和刪除實體的能力",
+      description: "在專案、週期和分類內具有讀取、寫入、編輯和刪除實體的能力",
     },
     admin: {
       title: "管理員",
@@ -2652,7 +2652,7 @@ export default {
   },
   default_global_view: {
     all_issues: "所有工作事項",
-    assigned: "已指派",
+    assigned: "被指派",
     created: "已建立",
     subscribed: "已訂閱",
   },
@@ -2706,8 +2706,8 @@ export default {
     no_cycle: "無週期",
   },
   module: {
-    label: "{count, plural, one {模組} other {模組}}",
-    no_module: "無模組",
+    label: "{count, plural, one {分類} other {分類}}",
+    no_module: "無分類",
   },
   description_versions: {
     last_edited_by: "最後編輯者",

@@ -122,3 +122,12 @@ export type TPublicModule = {
   id: string;
   name: string;
 };
+
+// ─── Category aliases (UI rename of Module) ──────────────────────────────────
+// 「Category（分類）」是 Module 的 UI 改名。底層型別與資料模型未變動，
+// 這些 alias 讓新程式碼用「Category」語意撰寫，舊程式碼以 IModule 持續運作。
+export type ICategory = IModule;
+export type TCategoryStatus = TModuleStatus;
+export type TCategoryCompletionChartDistribution = TModuleCompletionChartDistribution;
+export type TCategoryDistributionBase = TModuleDistributionBase;
+export type TPublicCategory = TPublicModule;

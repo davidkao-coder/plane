@@ -90,6 +90,7 @@ from .module import (
     ModuleLinkSerializer,
     ModuleUserPropertiesSerializer,
 )
+from .stage import StageSerializer
 
 from .api import APITokenSerializer, APITokenReadSerializer
 

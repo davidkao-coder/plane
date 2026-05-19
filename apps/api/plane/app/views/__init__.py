@@ -165,6 +165,9 @@ from .module.issue import ModuleIssueViewSet
 
 from .module.archive import ModuleArchiveUnarchiveEndpoint
 
+# TMS customization – Stage layer above Module
+from .stage import StageViewSet
+
 from .api import ApiTokenEndpoint
 
 from .page.base import (

@@ -133,6 +133,10 @@ class IssueFilterSet(BaseFilterSet):
     module_id = filters.UUIDFilter(method="filter_module_id")
     module_id__in = UUIDInFilter(method="filter_module_id_in", lookup_expr="in")
 
+    # TMS – Stage (parent of Module/Category)
+    stage_id = filters.UUIDFilter(method="filter_stage_id")
+    stage_id__in = UUIDInFilter(method="filter_stage_id_in", lookup_expr="in")
+
     mention_id = filters.UUIDFilter(method="filter_mention_id")
     mention_id__in = UUIDInFilter(method="filter_mention_id_in", lookup_expr="in")
 
@@ -221,6 +225,22 @@ class IssueFilterSet(BaseFilterSet):
         return Q(
             issue_module__module_id__in=value,
             issue_module__deleted_at__isnull=True,
+        )
+
+    def filter_stage_id(self, queryset, name, value):
+        """Filter by stage ID via the module relationship (TMS)."""
+        return Q(
+            issue_module__module__stage_id=value,
+            issue_module__deleted_at__isnull=True,
+            issue_module__module__deleted_at__isnull=True,
+        )
+
+    def filter_stage_id_in(self, queryset, name, value):
+        """Filter by stage IDs (in) via the module relationship (TMS)."""
+        return Q(
+            issue_module__module__stage_id__in=value,
+            issue_module__deleted_at__isnull=True,
+            issue_module__module__deleted_at__isnull=True,
         )
 
     def filter_mention_id(self, queryset, name, value):
