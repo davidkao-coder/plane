@@ -128,4 +128,8 @@ export enum EProjectFeatureKey {
   VIEWS = "views",
   PAGES = "pages",
   INTAKE = "intake",
+  // TMS customization (Phase 1)
+  STAGES = "stages",
+  REQUIREMENTS = "requirements",
+  FEATURES = "features",
 }
