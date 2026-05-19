@@ -143,6 +143,7 @@ export const CreateUpdateModuleModal = observer(function CreateUpdateModuleModal
         setActiveProject={setActiveProject}
         data={data}
         isMobile={isMobile}
+        workspaceSlug={workspaceSlug}
       />
     </ModalCore>
   );

@@ -76,6 +76,8 @@ export interface IModule {
   workspace_id: string;
   project_id: string;
   lead_id: string | null;
+  /** TMS – parent Stage; nullable while migration runs. */
+  stage_id: string | null;
   member_ids: string[];
   link_module?: ILinkDetails[];
   sub_issues?: number;
