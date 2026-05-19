@@ -194,6 +194,22 @@ export const coreRoutes: RouteConfigEntry[] = [
             ),
           ]),
 
+          // Requirements List – TMS customization
+          layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/requirements/(list)/layout.tsx", [
+            route(
+              ":workspaceSlug/projects/:projectId/requirements",
+              "./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/requirements/(list)/page.tsx"
+            ),
+          ]),
+
+          // Features List – TMS customization
+          layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/features/(list)/layout.tsx", [
+            route(
+              ":workspaceSlug/projects/:projectId/features",
+              "./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/features/(list)/page.tsx"
+            ),
+          ]),
+
           // View Detail
           layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/views/(detail)/layout.tsx", [
             route(

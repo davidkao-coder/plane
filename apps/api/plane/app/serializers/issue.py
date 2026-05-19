@@ -110,6 +110,10 @@ class IssueCreateSerializer(BaseSerializer):
             "updated_by",
             "created_at",
             "updated_at",
+            # actual_hours is a denormalized cache populated by WorkLog
+            # entries (TMS customization, Phase 1.9). Clients must POST to the
+            # work-logs endpoint instead of writing this field directly.
+            "actual_hours",
         ]
 
     def to_representation(self, instance):

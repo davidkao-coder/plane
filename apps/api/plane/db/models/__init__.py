@@ -48,6 +48,9 @@ from .issue import (
 )
 from .module import Module, ModuleIssue, ModuleLink, ModuleMember, ModuleUserProperties
 from .stage import Stage
+from .requirement import Requirement
+from .feature import Feature, RequirementFeature
+from .work_log import WorkLog
 from .notification import EmailNotificationLog, Notification, UserNotificationPreference
 from .page import Page, PageLabel, PageLog, ProjectPage, PageVersion
 from .project import (

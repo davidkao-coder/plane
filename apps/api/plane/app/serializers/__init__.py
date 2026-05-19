@@ -91,6 +91,9 @@ from .module import (
     ModuleUserPropertiesSerializer,
 )
 from .stage import StageSerializer
+from .requirement import RequirementSerializer
+from .feature import FeatureSerializer, RequirementFeatureSerializer
+from .work_log import WorkLogSerializer
 
 from .api import APITokenSerializer, APITokenReadSerializer
 
