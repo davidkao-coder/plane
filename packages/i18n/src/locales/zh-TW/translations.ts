@@ -18,6 +18,7 @@ export default {
     work_items: "工作項目",
     cycles: "週期",
     modules: "分類",
+    workboard: "整合檢視",
     stages: "階段",
     requirements: "需求",
     features: "功能",

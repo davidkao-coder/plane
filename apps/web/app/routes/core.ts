@@ -186,6 +186,14 @@ export const coreRoutes: RouteConfigEntry[] = [
             ),
           ]),
 
+          // Workboard – TMS unified hierarchy view (Phase 1.5+)
+          layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/workboard/layout.tsx", [
+            route(
+              ":workspaceSlug/projects/:projectId/workboard",
+              "./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/workboard/page.tsx"
+            ),
+          ]),
+
           // Stages List – TMS customization
           layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/stages/(list)/layout.tsx", [
             route(

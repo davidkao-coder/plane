@@ -870,6 +870,10 @@ class IssueListDetailSerializer(serializers.Serializer):
             "actual_hours": instance.actual_hours,
             "completed_hours": instance.completed_hours,
             "remaining_hours": instance.remaining_hours,
+            # TMS Phase 1.5 — hierarchy tags
+            "feature_id": instance.feature_id,
+            "stage_id": instance.stage_id,
+            "process_step_id": instance.process_step_id,
         }
 
         # Handle expanded fields only when requested - using direct field access

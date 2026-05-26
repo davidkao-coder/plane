@@ -11,7 +11,7 @@ import { useParams, usePathname } from "next/navigation";
 import { EUserPermissionsLevel, EUserPermissions } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { CycleIcon, IntakeIcon, ModuleIcon, PageIcon, ViewsIcon, WorkItemsIcon } from "@plane/propel/icons";
-import { Boxes, GitBranch, ListChecks } from "lucide-react";
+import { Boxes, GitBranch, LayoutGrid, ListChecks } from "lucide-react";
 import type { EUserProjectRoles } from "@plane/types";
 // plane ui
 // components
@@ -101,7 +101,17 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
         shouldRender: project?.module_view ?? false,
         sortOrder: 3,
       },
-      // TMS customization – Stages / Requirements / Features
+      // TMS customization – Stages / Requirements / Features / Workboard
+      {
+        i18n_key: "sidebar.workboard",
+        key: "workboard",
+        name: "整合檢視",
+        href: `/${workspaceSlug}/projects/${projectId}/workboard`,
+        icon: LayoutGrid,
+        access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
+        shouldRender: true,
+        sortOrder: 3.05,
+      },
       {
         i18n_key: "sidebar.stages",
         key: "stages",

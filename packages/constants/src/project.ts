@@ -132,4 +132,5 @@ export enum EProjectFeatureKey {
   STAGES = "stages",
   REQUIREMENTS = "requirements",
   FEATURES = "features",
+  WORKBOARD = "workboard",
 }
