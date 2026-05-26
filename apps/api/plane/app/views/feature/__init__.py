@@ -1,1 +1,1 @@
-from .base import FeatureViewSet, RequirementFeatureLinkEndpoint
+from .base import FeatureViewSet, RequirementFeatureLinkEndpoint, FeatureIssuesEndpoint
