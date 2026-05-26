@@ -31,6 +31,16 @@ class Requirement(ProjectBaseModel):
     description = models.TextField()
     source = models.CharField(max_length=100, blank=True)
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default="medium")
+    # TMS Phase 1.5 – Requirement is now strictly parented under a Module.
+    # nullable for the migration window only; the backfill step (migration
+    # 0132) wires every existing Requirement to the project's "未分類" Module.
+    module = models.ForeignKey(
+        "db.Module",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="requirements",
+    )
 
     class Meta:
         constraints = [

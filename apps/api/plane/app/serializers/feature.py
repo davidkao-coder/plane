@@ -10,7 +10,6 @@ from .base import BaseSerializer
 
 class FeatureSerializer(BaseSerializer):
     feature_id = serializers.CharField(read_only=True)
-    requirement_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = Feature
@@ -20,12 +19,11 @@ class FeatureSerializer(BaseSerializer):
             "feature_id",  # "FEA-001"
             "name",
             "description",
-            "stage",
+            "requirement",  # FK – parent Requirement (required after Phase 1.5)
             "estimated_hours",
             "sort_order",
             "project",
             "workspace",
-            "requirement_ids",
             "created_at",
             "updated_at",
             "created_by",
@@ -37,22 +35,19 @@ class FeatureSerializer(BaseSerializer):
             "feature_id",
             "project",
             "workspace",
-            "requirement_ids",
             "created_at",
             "updated_at",
             "created_by",
             "updated_by",
         ]
 
-    def get_requirement_ids(self, obj):
-        return [
-            str(link.requirement_id)
-            for link in obj.requirement_links.filter(deleted_at__isnull=True)
-        ]
-
 
 class RequirementFeatureSerializer(BaseSerializer):
+    """Legacy M:N pivot serializer (Phase 1.5 — kept for back-compat only;
+    pivot table is no longer written to, but kept on disk for historical
+    queries)."""
+
     class Meta:
         model = RequirementFeature
         fields = ["id", "requirement", "feature", "project", "workspace", "created_at"]
-        read_only_fields = ["id", "project", "workspace", "created_at"]
+        read_only_fields = fields

@@ -33,12 +33,14 @@ class StageViewSet(BaseViewSet):
                 project__archived_at__isnull=True,
             )
             .annotate(
-                total_modules=Count(
-                    "stage_modules",
-                    filter=Q(stage_modules__deleted_at__isnull=True),
+                # Phase 1.5: Stage no longer parents Module. Instead, count
+                # Issues tagged with this Stage (cross-cutting view).
+                total_issues=Count(
+                    "stage_issues",
+                    filter=Q(stage_issues__deleted_at__isnull=True),
                 )
             )
-            .select_related("project", "workspace")
+            .select_related("project", "workspace", "process_template")
             .distinct()
         )
 
@@ -85,6 +87,8 @@ class StageViewSet(BaseViewSet):
     @allow_permission([ROLE.ADMIN])
     def destroy(self, request, slug, project_id, pk):
         stage = Stage.objects.get(pk=pk, project_id=project_id, workspace__slug=slug)
-        # SET_NULL FKs on Module.stage – orphaned modules just become "uncategorised"
+        # Phase 1.5: SET_NULL on Issue.stage – orphaned issues just lose
+        # their stage tag, business tree (Module→Requirement→Feature→Issue)
+        # is unaffected.
         stage.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -9,12 +9,13 @@ from .base import BaseSerializer
 
 
 class StageSerializer(BaseSerializer):
-    total_modules = serializers.IntegerField(read_only=True)
+    total_issues = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Stage
         fields = [
             "id",
+            "key",
             "name",
             "description",
             "sort_order",
@@ -26,11 +27,12 @@ class StageSerializer(BaseSerializer):
             "external_id",
             "project",
             "workspace",
+            "process_template",
             "created_at",
             "updated_at",
             "created_by",
             "updated_by",
-            "total_modules",
+            "total_issues",
         ]
         read_only_fields = [
             "id",
@@ -40,5 +42,5 @@ class StageSerializer(BaseSerializer):
             "updated_at",
             "created_by",
             "updated_by",
-            "total_modules",
+            "total_issues",
         ]

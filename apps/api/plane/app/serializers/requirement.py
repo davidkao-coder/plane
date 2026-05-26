@@ -20,6 +20,7 @@ class RequirementSerializer(BaseSerializer):
             "description",
             "source",
             "priority",
+            "module",  # FK – parent Module (required after Phase 1.5)
             "project",
             "workspace",
             "created_at",

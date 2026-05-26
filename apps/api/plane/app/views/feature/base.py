@@ -29,8 +29,7 @@ class FeatureViewSet(BaseViewSet):
                 project__project_projectmember__is_active=True,
                 project__archived_at__isnull=True,
             )
-            .select_related("project", "workspace", "stage")
-            .prefetch_related("requirement_links")
+            .select_related("project", "workspace", "requirement")
             .distinct()
         )
 

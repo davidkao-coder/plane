@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # See the LICENSE file for details.
 #
-# Feature – TMS customization. Sits between Requirement and Issue, and can be
-# attached to a Stage. M:N relation with Requirement via RequirementFeature.
+# Feature – TMS customization (Phase 1.5: now strictly 1:N under Requirement).
+# Sits between Requirement and Issue. Stage is NOT an attribute of Feature —
+# it lives on each spawned Issue instead.
 
 from django.db import models, connection
 from django.db.models import Q
@@ -19,12 +20,14 @@ class Feature(ProjectBaseModel):
     sequence_id = models.IntegerField(default=1, verbose_name="Feature Sequence ID")
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    stage = models.ForeignKey(
-        "db.Stage",
-        on_delete=models.SET_NULL,
+    # TMS Phase 1.5: Feature now belongs to exactly one Requirement (1:N).
+    # nullable for migration window only; backfilled to "未分類" Requirement.
+    requirement = models.ForeignKey(
+        "db.Requirement",
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name="stage_features",
+        related_name="features",
     )
     estimated_hours = models.DecimalField(
         max_digits=7, decimal_places=1, null=True, blank=True

@@ -172,6 +172,29 @@ class Issue(ProjectBaseModel):
         null=True,
         blank=True,
     )
+    # TMS Phase 1.5 — strict tree (Issue is a child of Feature) + Stage tag.
+    # All three nullable for backwards-compat; backfilled via migration 0134.
+    feature = models.ForeignKey(
+        "db.Feature",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="issues",
+    )
+    stage = models.ForeignKey(
+        "db.Stage",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stage_issues",
+    )
+    process_step = models.ForeignKey(
+        "db.ProcessStep",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="spawned_issues",
+    )
 
     issue_objects = IssueManager()
 

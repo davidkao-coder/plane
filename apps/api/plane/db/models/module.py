@@ -84,15 +84,9 @@ class Module(ProjectBaseModel):
         max_length=20,
     )
     lead = models.ForeignKey("db.User", on_delete=models.SET_NULL, related_name="module_leads", null=True)
-    # TMS – Module belongs to a Stage (nullable for back-compat; backfilled to a
-    # per-project "未分類階段" by data migration).
-    stage = models.ForeignKey(
-        "db.Stage",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="stage_modules",
-    )
+    # TMS Phase 1.5: Module no longer belongs to a Stage. Stage is now a
+    # cross-cutting tag on Issue, not a parent of Module. Field removed via
+    # migration 0131.
     members = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,

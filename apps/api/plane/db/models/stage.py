@@ -18,7 +18,26 @@ from django.db.models import Q
 from .project import ProjectBaseModel
 
 
+STAGE_KEY_CHOICES = (
+    ("req_analysis", "需求分析"),
+    ("design", "設計與規劃"),
+    ("poc", "技術 POC"),
+    ("dev", "開發"),
+    ("testing", "測試與驗收"),
+    ("deployment", "上線部署"),
+    ("maintenance", "維護"),
+    ("unsorted", "未分類"),  # 特例：default chain fallback
+)
+
+
 class Stage(ProjectBaseModel):
+    # Stable key (one of STAGE_KEY_CHOICES) – identifies which slot this
+    # Stage occupies. A Project has at most one Stage per non-"unsorted" key.
+    # nullable for migration period: older Stages have key = None until
+    # backfilled.
+    key = models.CharField(
+        max_length=50, choices=STAGE_KEY_CHOICES, null=True, blank=True
+    )
     name = models.CharField(max_length=255, verbose_name="Stage Name")
     description = models.TextField(verbose_name="Stage Description", blank=True)
     sort_order = models.FloatField(default=65535)
@@ -28,6 +47,16 @@ class Stage(ProjectBaseModel):
     logo_props = models.JSONField(default=dict)
     external_source = models.CharField(max_length=255, null=True, blank=True)
     external_id = models.CharField(max_length=255, null=True, blank=True)
+    # FK → ProcessTemplate (which workflow runs when Features are created
+    # under this Stage). nullable: maintenance / unsorted Stages may have no
+    # default workflow.
+    process_template = models.ForeignKey(
+        "db.ProcessTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stages",
+    )
 
     class Meta:
         constraints = [

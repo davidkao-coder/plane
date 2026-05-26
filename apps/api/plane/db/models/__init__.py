@@ -47,7 +47,13 @@ from .issue import (
     IssueDescriptionVersion,
 )
 from .module import Module, ModuleIssue, ModuleLink, ModuleMember, ModuleUserProperties
-from .stage import Stage
+from .stage import Stage, STAGE_KEY_CHOICES
+from .process_template import ProcessTemplate, ProcessStep
+from .project_template import (
+    ProjectTemplate,
+    ProjectTemplateModule,
+    ProjectTemplateRequirement,
+)
 from .requirement import Requirement
 from .feature import Feature, RequirementFeature
 from .work_log import WorkLog
