@@ -11,6 +11,7 @@ import { useParams, usePathname } from "next/navigation";
 import { EUserPermissionsLevel, EUserPermissions } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { CycleIcon, IntakeIcon, ModuleIcon, PageIcon, ViewsIcon, WorkItemsIcon } from "@plane/propel/icons";
+import { Boxes, GitBranch, ListChecks } from "lucide-react";
 import type { EUserProjectRoles } from "@plane/types";
 // plane ui
 // components
@@ -99,6 +100,37 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
         access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
         shouldRender: project?.module_view ?? false,
         sortOrder: 3,
+      },
+      // TMS customization – Stages / Requirements / Features
+      {
+        i18n_key: "sidebar.stages",
+        key: "stages",
+        name: "階段",
+        href: `/${workspaceSlug}/projects/${projectId}/stages`,
+        icon: GitBranch,
+        access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
+        shouldRender: true,
+        sortOrder: 3.1,
+      },
+      {
+        i18n_key: "sidebar.requirements",
+        key: "requirements",
+        name: "需求",
+        href: `/${workspaceSlug}/projects/${projectId}/requirements`,
+        icon: ListChecks,
+        access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
+        shouldRender: true,
+        sortOrder: 3.2,
+      },
+      {
+        i18n_key: "sidebar.features",
+        key: "features",
+        name: "功能",
+        href: `/${workspaceSlug}/projects/${projectId}/features`,
+        icon: Boxes,
+        access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
+        shouldRender: true,
+        sortOrder: 3.3,
       },
       {
         i18n_key: "sidebar.views",
