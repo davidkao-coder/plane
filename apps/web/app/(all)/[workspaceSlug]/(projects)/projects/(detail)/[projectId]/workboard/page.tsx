@@ -185,7 +185,12 @@ function WorkboardPage({ params }: Route.ComponentProps) {
   );
 
   const standardStages = useMemo(
-    () => [...stages].filter((s) => s.key && s.key !== "unsorted").sort((a, b) => a.sort_order - b.sort_order),
+    () =>
+      [...stages]
+        // Show all named stages except the system "unsorted" fallback,
+        // including admin-created stages that have no key.
+        .filter((s) => s.key !== "unsorted")
+        .sort((a, b) => a.sort_order - b.sort_order),
     [stages]
   );
 
@@ -862,7 +867,7 @@ function QuickEditModal({
                 >
                   <option value="">— 未指定 —</option>
                   {stages
-                    .filter((s) => s.key && s.key !== "unsorted")
+                    .filter((s) => s.key !== "unsorted")
                     .sort((a, b) => a.sort_order - b.sort_order)
                     .map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>

@@ -114,7 +114,7 @@ function ProjectStagesPage({ params }: Route.ComponentProps) {
                 <tr>
                   <th className="text-left px-3 py-2">名稱</th>
                   <th className="text-left px-3 py-2">描述</th>
-                  <th className="text-right px-3 py-2">分類數</th>
+                  <th className="text-right px-3 py-2">工作項目數</th>
                   <th className="text-left px-3 py-2">起始</th>
                   <th className="text-left px-3 py-2">截止</th>
                   <th className="text-right px-3 py-2 w-24">動作</th>
@@ -125,7 +125,7 @@ function ProjectStagesPage({ params }: Route.ComponentProps) {
                   <tr key={s.id} className="border-t border-subtle hover:bg-surface-2/40">
                     <td className="px-3 py-2 font-medium text-primary">{s.name}</td>
                     <td className="px-3 py-2 text-tertiary truncate max-w-md">{s.description || "—"}</td>
-                    <td className="px-3 py-2 text-right">{s.total_modules ?? 0}</td>
+                    <td className="px-3 py-2 text-right">{s.total_issues ?? 0}</td>
                     <td className="px-3 py-2 text-tertiary">{s.start_date ?? "—"}</td>
                     <td className="px-3 py-2 text-tertiary">{s.target_date ?? "—"}</td>
                     <td className="px-3 py-2 text-right">

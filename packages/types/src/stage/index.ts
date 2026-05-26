@@ -3,12 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  *
- * Stage — TMS customization. Insert a layer between Project and Module:
- *   Project → Stage → Module(Category) → Issue → Sub-Issue
+ * Stage — TMS customization (Phase 1.5).
+ *
+ *   Project ⊥ Stage (cross-cutting tag on Issue)
+ *   Project → Module → Requirement → Feature → Issue
  */
 
 export interface IStage {
   id: string;
+  /** Stable identifier: req_analysis / design / poc / dev / testing / deployment / maintenance / unsorted / null */
+  key: string | null;
   name: string;
   description: string;
   sort_order: number;
@@ -20,12 +24,13 @@ export interface IStage {
   external_id: string | null;
   project: string;
   workspace: string;
+  process_template: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
   updated_by: string | null;
-  /** Computed: how many modules belong to this stage. */
-  total_modules?: number;
+  /** Computed: how many issues are tagged with this stage. */
+  total_issues?: number;
 }
 
 export type TStageWritePayload = Partial<
