@@ -137,11 +137,21 @@ class FeatureIssuesEndpoint(BaseAPIView):
                 workspace__slug=slug,
                 feature_id=feature_id,
             )
-            .select_related("stage", "process_step", "state")
+            .select_related(
+                "stage",
+                "process_step",
+                "state",
+                "feature",
+                "feature__requirement",
+                "feature__requirement__module",
+            )
             .order_by("stage__sort_order", "process_step__sort_order", "created_at")
         )
         data = []
         for i in qs:
+            feat = i.feature
+            req = feat.requirement if feat else None
+            mod = req.module if req else None
             data.append(
                 {
                     "id": str(i.id),
@@ -158,6 +168,14 @@ class FeatureIssuesEndpoint(BaseAPIView):
                     "state_id": str(i.state_id) if i.state_id else None,
                     "state_name": i.state.name if i.state else None,
                     "state_group": i.state.group if i.state else None,
+                    # parent breadcrumb (workboard flat views need this)
+                    "feature_id": str(feat.id) if feat else None,
+                    "feature_display_id": feat.feature_id if feat else None,
+                    "feature_name": feat.name if feat else None,
+                    "requirement_id": str(req.id) if req else None,
+                    "requirement_display_id": req.requirement_id if req else None,
+                    "module_id": str(mod.id) if mod else None,
+                    "module_name": mod.name if mod else None,
                     "created_at": i.created_at.isoformat(),
                 }
             )

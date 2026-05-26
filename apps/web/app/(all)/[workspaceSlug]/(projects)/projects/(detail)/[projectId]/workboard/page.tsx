@@ -260,6 +260,32 @@ function WorkboardPage({ params }: Route.ComponentProps) {
     return m;
   }, [features]);
 
+  // Issue count aggregations for tree counters (computed from currently loaded issues)
+  const issuesByFeature = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const i of issues) {
+      if (!i.feature_id) continue;
+      m.set(i.feature_id, (m.get(i.feature_id) ?? 0) + 1);
+    }
+    return m;
+  }, [issues]);
+  const issuesByRequirement = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const i of issues) {
+      if (!i.requirement_id) continue;
+      m.set(i.requirement_id, (m.get(i.requirement_id) ?? 0) + 1);
+    }
+    return m;
+  }, [issues]);
+  const issuesByModule = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const i of issues) {
+      if (!i.module_id) continue;
+      m.set(i.module_id, (m.get(i.module_id) ?? 0) + 1);
+    }
+    return m;
+  }, [issues]);
+
   // ─── delete helpers ────────────────────────────────────────────────────
   const handleDeleteModule = async (m: IModule) => {
     if (m.name === UNSORTED_NAME) {
@@ -442,7 +468,10 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                       >
                         {m.name}
                       </button>
-                      <span className="text-10 text-tertiary">{moduleReqs.length}</span>
+                      <span className="text-10 text-tertiary" title="需求數 / 工項數">
+                        {moduleReqs.length}
+                        {issuesByModule.get(m.id) ? ` · ${issuesByModule.get(m.id)}🎫` : ""}
+                      </span>
                       <span className="invisible group-hover:visible flex items-center gap-0.5 ml-1">
                         <NodeActionBtn icon={Plus} title="加需求" onClick={() => setAddTarget({ kind: "requirement", moduleId: m.id })} />
                         {!isUnsorted && (
@@ -502,7 +531,10 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                                 <span className="font-mono text-10 text-tertiary mr-1">{r.requirement_id}</span>
                                 {r.description.slice(0, 30)}
                               </button>
-                              <span className="text-10 text-tertiary">{reqFeatures.length}</span>
+                              <span className="text-10 text-tertiary" title="功能數 / 工項數">
+                                {reqFeatures.length}
+                                {issuesByRequirement.get(r.id) ? ` · ${issuesByRequirement.get(r.id)}🎫` : ""}
+                              </span>
                               <span className="invisible group-hover:visible flex items-center gap-0.5 ml-1">
                                 <NodeActionBtn icon={Plus} title="加功能" onClick={() => setAddTarget({ kind: "feature", requirementId: r.id })} />
                                 <NodeActionBtn icon={Pencil} title="編輯" onClick={() => setEditTarget({ kind: "requirement", data: r })} />
@@ -552,6 +584,9 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                                     <span className="font-mono text-10 text-tertiary mr-1">{f.feature_id}</span>
                                     {f.name}
                                   </button>
+                                  <span className="text-10 text-tertiary" title="工項數">
+                                    {issuesByFeature.get(f.id) ? `${issuesByFeature.get(f.id)}🎫` : ""}
+                                  </span>
                                   <span className="invisible group-hover:visible flex items-center gap-0.5 ml-1">
                                     <NodeActionBtn icon={Plus} title="加工項" onClick={() => setAddTarget({ kind: "issue", featureId: f.id })} />
                                     <NodeActionBtn icon={Pencil} title="編輯" onClick={() => setEditTarget({ kind: "feature", data: f })} />
@@ -800,11 +835,21 @@ function QuickCreateModal({
           module: target.moduleId,
         });
       } else if (target.kind === "feature") {
-        await featureService.createFeature(slug, pid, {
+        const created = await featureService.createFeature(slug, pid, {
           name: name.trim(),
           description,
           requirement: target.requirementId,
         });
+        const spawned = created?.spawned_issues ?? 0;
+        if (spawned > 0) {
+          setToast({
+            type: TOAST_TYPE.SUCCESS,
+            title: "已建立功能",
+            message: `自動產生 ${spawned} 個工序工作項目`,
+          });
+          onSaved();
+          return; // skip generic toast below
+        }
       } else if (target.kind === "issue") {
         // standard Plane issue create – just name + feature_id
         await issueService.createIssue(slug, pid, {
@@ -1085,39 +1130,19 @@ function LayoutAStacked(props: LayoutAProps) {
     () => (selRequirement ? features.filter((f) => f.requirement === selRequirement) : features),
     [features, selRequirement]
   );
-  const visibleIssues = useMemo(
-    () =>
-      selFeature
-        ? issues.filter((i) => visibleFeatures.find((f) => f.id === selFeature))
-        : issues.filter((i) => {
-            // chain filter through current selection
-            if (selFeature) return false; // handled above
-            if (selRequirement) {
-              const featIds = features.filter((f) => f.requirement === selRequirement).map((f) => f.id);
-              // we don't have feature_id on TFeatureIssue directly; rely on its inclusion in `issues`
-              return featIds.length > 0; // approximate
-            }
-            return true;
-          }),
-    [issues, selFeature, selRequirement, features, visibleFeatures]
-  );
-
-  // simpler issue filter: just track which feature_id should be visible
+  // Properly filter issues by selected node via feature_id (now exposed by API)
   const finalIssues = useMemo(() => {
-    let visibleFeatureIds: Set<string> | null = null;
     if (selFeature) {
-      visibleFeatureIds = new Set([selFeature]);
-    } else if (selRequirement) {
-      visibleFeatureIds = new Set(features.filter((f) => f.requirement === selRequirement).map((f) => f.id));
-    } else if (selModule) {
-      const reqIds = requirements.filter((r) => r.module === selModule).map((r) => r.id);
-      visibleFeatureIds = new Set(features.filter((f) => f.requirement && reqIds.includes(f.requirement)).map((f) => f.id));
+      return issues.filter((i) => i.feature_id === selFeature);
     }
-    if (!visibleFeatureIds) return issues;
-    // Walk parent chain via feature on stored Issue; TFeatureIssue doesn't expose feature_id directly,
-    // so we filter by stage_id presence (all spawned issues have feature). Approximation OK.
-    return issues; // approximation – server-side filter would be cleaner
-  }, [issues, selFeature, selRequirement, selModule, features, requirements]);
+    if (selRequirement) {
+      return issues.filter((i) => i.requirement_id === selRequirement);
+    }
+    if (selModule) {
+      return issues.filter((i) => i.module_id === selModule);
+    }
+    return issues;
+  }, [issues, selFeature, selRequirement, selModule]);
 
   if (loading) return <div className="flex items-center justify-center h-72 text-tertiary text-13">載入中…</div>;
 
@@ -1528,7 +1553,7 @@ function LayoutCSpreadsheet({
         </div>
       )}
 
-      <div className="rounded-md border border-subtle bg-surface-1 overflow-hidden">
+      <div className="rounded-md border border-subtle bg-surface-1 overflow-x-auto">
         <table className="w-full text-12">
           <thead className="bg-surface-2 text-11 text-tertiary sticky top-0">
             <tr>
@@ -1536,10 +1561,13 @@ function LayoutCSpreadsheet({
                 <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} className="accent-blue-500" />
               </th>
               <th className="text-left px-2 py-1.5 w-12">#</th>
+              <th className="text-left px-2 py-1.5 w-24">分類</th>
+              <th className="text-left px-2 py-1.5 w-24">需求</th>
+              <th className="text-left px-2 py-1.5 w-24">功能</th>
               <th className="text-left px-2 py-1.5">名稱</th>
-              <th className="text-left px-2 py-1.5 w-24">階段</th>
-              <th className="text-left px-2 py-1.5 w-20">工序</th>
-              <th className="text-left px-2 py-1.5 w-24">狀態</th>
+              <th className="text-left px-2 py-1.5 w-20">階段</th>
+              <th className="text-left px-2 py-1.5 w-16">工序</th>
+              <th className="text-left px-2 py-1.5 w-20">狀態</th>
               <th className="text-right px-2 py-1.5 w-12">預估</th>
               <th className="text-right px-2 py-1.5 w-12">實際</th>
               <th className="text-right px-2 py-1.5 w-16">動作</th>
@@ -1565,6 +1593,9 @@ function LayoutCSpreadsheet({
                     />
                   </td>
                   <td className="px-2 py-1 font-mono text-10 text-tertiary">#{i.sequence_id}</td>
+                  <td className="px-2 py-1 text-tertiary truncate" title={i.module_name ?? ""}>{i.module_name ?? "—"}</td>
+                  <td className="px-2 py-1 text-tertiary truncate font-mono">{i.requirement_display_id ?? "—"}</td>
+                  <td className="px-2 py-1 text-tertiary truncate font-mono">{i.feature_display_id ?? "—"}</td>
                   <td className="px-2 py-1 truncate max-w-md">{i.name}</td>
                   <td className="px-2 py-1 text-tertiary">{i.stage_name ?? "—"}</td>
                   <td className="px-2 py-1 text-tertiary">{i.process_step_name ?? "—"}</td>

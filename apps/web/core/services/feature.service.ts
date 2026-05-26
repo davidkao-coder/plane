@@ -23,6 +23,14 @@ export type TFeatureIssue = {
   state_id: string | null;
   state_name: string | null;
   state_group: string | null;
+  // parent breadcrumb (Phase 1.5+ workboard)
+  feature_id: string | null;
+  feature_display_id: string | null;
+  feature_name: string | null;
+  requirement_id: string | null;
+  requirement_display_id: string | null;
+  module_id: string | null;
+  module_name: string | null;
   created_at: string;
 };
 
