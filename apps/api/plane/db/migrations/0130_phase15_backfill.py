@@ -150,10 +150,15 @@ def backfill(apps, schema_editor):
                 feat.requirement = unsorted_req
                 feat.save(update_fields=["requirement"])
 
-        # ── 5. Backfill Issues without feature ───────────────────────────
-        Issue.objects.filter(
-            project=proj, feature__isnull=True
-        ).update(feature=unsorted_feature)
+        # ── 5. Backfill Issues without feature (raw SQL — Issue model in
+        # migration context doesn't expose Plane's custom IssueManager) ──
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE issues SET feature_id = %s "
+                " WHERE project_id = %s AND feature_id IS NULL",
+                [str(unsorted_feature.id), str(proj.id)],
+            )
 
 
 class Migration(migrations.Migration):
