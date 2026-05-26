@@ -169,6 +169,13 @@ from .module.archive import ModuleArchiveUnarchiveEndpoint
 from .stage import StageViewSet
 from .requirement import RequirementViewSet
 from .feature import FeatureViewSet, RequirementFeatureLinkEndpoint
+from .process_template import ProcessTemplateViewSet, ProcessStepBulkEndpoint
+from .project_template import (
+    ProjectTemplateViewSet,
+    ProjectTemplateModuleEndpoint,
+    ProjectTemplateRequirementEndpoint,
+    ApplyProjectTemplateEndpoint,
+)
 from .work_log import WorkLogViewSet
 
 from .api import ApiTokenEndpoint

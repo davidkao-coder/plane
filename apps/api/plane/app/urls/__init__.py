@@ -14,6 +14,8 @@ from .module import urlpatterns as module_urls
 from .stage import urlpatterns as stage_urls
 from .requirement import urlpatterns as requirement_urls
 from .feature import urlpatterns as feature_urls
+from .process_template import urlpatterns as process_template_urls
+from .project_template import urlpatterns as project_template_urls
 from .work_log import urlpatterns as work_log_urls
 from .notification import urlpatterns as notification_urls
 from .page import urlpatterns as page_urls
@@ -39,6 +41,8 @@ urlpatterns = [
     *stage_urls,
     *requirement_urls,
     *feature_urls,
+    *process_template_urls,
+    *project_template_urls,
     *work_log_urls,
     *notification_urls,
     *page_urls,

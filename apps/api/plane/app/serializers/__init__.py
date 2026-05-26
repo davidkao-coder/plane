@@ -93,6 +93,13 @@ from .module import (
 from .stage import StageSerializer
 from .requirement import RequirementSerializer
 from .feature import FeatureSerializer, RequirementFeatureSerializer
+from .process_template import ProcessTemplateSerializer, ProcessStepSerializer
+from .project_template import (
+    ProjectTemplateSerializer,
+    ProjectTemplateLiteSerializer,
+    ProjectTemplateModuleSerializer,
+    ProjectTemplateRequirementSerializer,
+)
 from .work_log import WorkLogSerializer
 
 from .api import APITokenSerializer, APITokenReadSerializer

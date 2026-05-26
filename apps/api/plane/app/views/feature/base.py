@@ -2,16 +2,67 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # See the LICENSE file for details.
 #
-# Feature ViewSet + Requirement↔Feature pivot endpoint – TMS customization.
+# Feature ViewSet + auto-spawn workflow – TMS Phase 1.5.
+
+from django.db import transaction
 
 from rest_framework import status
 from rest_framework.response import Response
 
 from plane.app.permissions import ROLE, allow_permission
 from plane.app.serializers import FeatureSerializer, RequirementSerializer
-from plane.db.models import Feature, Requirement, RequirementFeature
+from plane.db.models import Feature, Issue, Requirement, RequirementFeature, Stage, State
 
 from .. import BaseAPIView, BaseViewSet
+
+
+def spawn_default_issues_for_feature(feature, user=None):
+    """Phase 1.5 — when a Feature is created, auto-create one Issue per
+    ProcessStep defined on each Stage's ProcessTemplate for that project.
+
+    The Issues are placed in the project's default state (lowest priority
+    backlog / first state). Stage tag + process_step FK are populated.
+    """
+    project = feature.project
+    # Pick a sensible default state (first one in default group "backlog" /
+    # else first by sequence).
+    default_state = (
+        State.objects.filter(project=project, group="backlog").first()
+        or State.objects.filter(project=project).order_by("sequence").first()
+    )
+    if default_state is None:
+        # No states – fall back without state (Plane allows null state)
+        default_state = None
+
+    created_count = 0
+    stages = (
+        Stage.objects.filter(project=project, deleted_at__isnull=True)
+        .exclude(key="unsorted")
+        .exclude(key__isnull=True)
+        .select_related("process_template")
+        .order_by("sort_order")
+    )
+    for stage in stages:
+        if stage.process_template_id is None:
+            continue
+        steps = stage.process_template.steps.filter(
+            deleted_at__isnull=True
+        ).order_by("sort_order")
+        for step in steps:
+            issue = Issue.objects.create(
+                project=project,
+                workspace=project.workspace,
+                feature=feature,
+                stage=stage,
+                process_step=step,
+                name=f"{step.name} — {feature.name}",
+                estimate_hours=step.default_estimated_hours,
+                state=default_state,
+                created_by=user,
+                updated_by=user,
+            )
+            created_count += 1
+    return created_count
 
 
 class FeatureViewSet(BaseViewSet):
@@ -42,8 +93,13 @@ class FeatureViewSet(BaseViewSet):
     def create(self, request, slug, project_id):
         serializer = FeatureSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(project_id=project_id)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            with transaction.atomic():
+                feature = serializer.save(project_id=project_id)
+                # Phase 1.5: auto-spawn Issues for the standard stages
+                spawned = spawn_default_issues_for_feature(feature, user=request.user)
+            data = serializer.data
+            data["spawned_issues"] = spawned
+            return Response(data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @allow_permission([ROLE.ADMIN, ROLE.MEMBER])
