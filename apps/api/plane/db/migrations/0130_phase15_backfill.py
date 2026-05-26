@@ -67,14 +67,19 @@ def backfill(apps, schema_editor):
                     sort_order=9999,
                 )
 
-        # 7 standard stages
+        # 7 standard stages — match by key first, fallback by name (so
+        # admin-created stages get adopted instead of duplicated)
         for key, name, sort_order in STANDARD_STAGES:
-            existing = Stage.objects.filter(
-                project=proj, key=key, deleted_at__isnull=True
-            ).first()
             tpl = ProcessTemplate.objects.filter(
                 workspace=ws, stage_key=key, deleted_at__isnull=True
             ).first()
+            existing = Stage.objects.filter(
+                project=proj, key=key, deleted_at__isnull=True
+            ).first()
+            if existing is None:
+                existing = Stage.objects.filter(
+                    project=proj, name=name, deleted_at__isnull=True
+                ).first()
             if existing is None:
                 Stage.objects.create(
                     project=proj,
@@ -84,9 +89,16 @@ def backfill(apps, schema_editor):
                     sort_order=sort_order,
                     process_template=tpl,
                 )
-            elif existing.process_template_id is None and tpl:
-                existing.process_template = tpl
-                existing.save(update_fields=["process_template"])
+            else:
+                changed = False
+                if existing.key != key:
+                    existing.key = key
+                    changed = True
+                if existing.process_template_id is None and tpl:
+                    existing.process_template = tpl
+                    changed = True
+                if changed:
+                    existing.save(update_fields=["key", "process_template"])
 
         # ── 2. Default Module / Requirement / Feature chain ──────────────
         unsorted_module = Module.objects.filter(
