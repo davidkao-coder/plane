@@ -100,6 +100,50 @@ function WorkboardPage({ params }: Route.ComponentProps) {
     if (typeof window !== "undefined") localStorage.setItem("workboard:viewMode", viewMode);
   }, [viewMode]);
 
+  // W6 — multi-select state for batch operations on Issues (Layout C)
+  const [selectedIssues, setSelectedIssues] = useState<Set<string>>(new Set());
+  const toggleIssueSelected = (id: string) =>
+    setSelectedIssues((p) => {
+      const n = new Set(p);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  const clearSelectedIssues = () => setSelectedIssues(new Set());
+
+  // W5 — drag-and-drop reparent (HTML5 native, no library)
+  // Drag data shape: { kind: "issue" | "feature" | "requirement", id: string }
+  const handleDrop = async (
+    dragged: { kind: "issue" | "feature" | "requirement"; id: string },
+    target: { kind: "feature" | "requirement" | "module"; id: string }
+  ) => {
+    // Allowed transitions: issue→feature, feature→requirement, requirement→module
+    const allowed =
+      (dragged.kind === "issue" && target.kind === "feature") ||
+      (dragged.kind === "feature" && target.kind === "requirement") ||
+      (dragged.kind === "requirement" && target.kind === "module");
+    if (!allowed) {
+      setToast({ type: TOAST_TYPE.WARNING, title: "不支援的拖拉方向" });
+      return;
+    }
+    try {
+      if (dragged.kind === "issue") {
+        await issueService.patchIssue(slug, pid, dragged.id, { feature: target.id } as any);
+      } else if (dragged.kind === "feature") {
+        await featureService.patchFeature(slug, pid, dragged.id, { requirement: target.id });
+      } else if (dragged.kind === "requirement") {
+        await requirementService.patchRequirement(slug, pid, dragged.id, { module: target.id });
+      }
+      setToast({ type: TOAST_TYPE.SUCCESS, title: "已搬移" });
+      reloadStructure().then(() => reloadIssues());
+    } catch (e) {
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: "搬移失敗",
+        message: (e as { detail?: string })?.detail ?? "請再試一次",
+      });
+    }
+  };
+
   // When switching to layout A or C, eagerly load ALL issues so the
   // flattened views can show data; B is lazy by selected node.
   useEffect(() => {
@@ -371,6 +415,21 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                         "group flex items-center gap-1 px-1 py-1 rounded hover:bg-surface-2",
                         selected.kind === "module" && selected.id === m.id && "bg-blue-500/10"
                       )}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.add("ring-1", "ring-blue-400");
+                      }}
+                      onDragLeave={(e) => e.currentTarget.classList.remove("ring-1", "ring-blue-400")}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove("ring-1", "ring-blue-400");
+                        try {
+                          const data = JSON.parse(e.dataTransfer.getData("application/json"));
+                          handleDrop(data, { kind: "module", id: m.id });
+                        } catch {
+                          /* ignore non-DnD drops */
+                        }
+                      }}
                     >
                       <button onClick={() => toggleExpanded(`m:${m.id}`)} className="p-0.5">
                         {isOpen ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
@@ -405,6 +464,31 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                                 "group flex items-center gap-1 px-1 py-1 rounded hover:bg-surface-2",
                                 selected.kind === "requirement" && selected.id === r.id && "bg-blue-500/10"
                               )}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData(
+                                  "application/json",
+                                  JSON.stringify({ kind: "requirement", id: r.id })
+                                );
+                                e.dataTransfer.effectAllowed = "move";
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.currentTarget.classList.add("ring-1", "ring-blue-400");
+                              }}
+                              onDragLeave={(e) =>
+                                e.currentTarget.classList.remove("ring-1", "ring-blue-400")
+                              }
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                e.currentTarget.classList.remove("ring-1", "ring-blue-400");
+                                try {
+                                  const data = JSON.parse(e.dataTransfer.getData("application/json"));
+                                  handleDrop(data, { kind: "requirement", id: r.id });
+                                } catch {
+                                  /* ignore */
+                                }
+                              }}
                             >
                               <button onClick={() => toggleExpanded(`r:${r.id}`)} className="p-0.5">
                                 {reqOpen ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
@@ -433,6 +517,31 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                                     "ml-5 mt-0.5 group flex items-center gap-1 px-1 py-1 rounded hover:bg-surface-2",
                                     selected.kind === "feature" && selected.id === f.id && "bg-blue-500/10"
                                   )}
+                                  draggable
+                                  onDragStart={(e) => {
+                                    e.dataTransfer.setData(
+                                      "application/json",
+                                      JSON.stringify({ kind: "feature", id: f.id })
+                                    );
+                                    e.dataTransfer.effectAllowed = "move";
+                                  }}
+                                  onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.classList.add("ring-1", "ring-blue-400");
+                                  }}
+                                  onDragLeave={(e) =>
+                                    e.currentTarget.classList.remove("ring-1", "ring-blue-400")
+                                  }
+                                  onDrop={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.classList.remove("ring-1", "ring-blue-400");
+                                    try {
+                                      const data = JSON.parse(e.dataTransfer.getData("application/json"));
+                                      handleDrop(data, { kind: "feature", id: f.id });
+                                    } catch {
+                                      /* ignore */
+                                    }
+                                  }}
                                 >
                                   <Package className="size-3.5 text-emerald-500 ml-3" />
                                   <button
@@ -490,7 +599,18 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                 </thead>
                 <tbody>
                   {filteredIssues.map((i) => (
-                    <tr key={i.id} className="border-t border-subtle hover:bg-surface-2/40 group">
+                    <tr
+                      key={i.id}
+                      className="border-t border-subtle hover:bg-surface-2/40 group cursor-grab"
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData(
+                          "application/json",
+                          JSON.stringify({ kind: "issue", id: i.id })
+                        );
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                    >
                       <td className="px-3 py-1.5 font-mono text-11 text-tertiary">#{i.sequence_id}</td>
                       <td className="px-3 py-1.5 truncate max-w-md">{i.name}</td>
                       <td className="px-3 py-1.5 text-tertiary">{i.stage_name ?? "—"}</td>
@@ -552,13 +672,20 @@ function WorkboardPage({ params }: Route.ComponentProps) {
 
       {viewMode === "C" && (
         <LayoutCSpreadsheet
+          slug={slug}
+          pid={pid}
           modules={modules}
           requirements={requirements}
           features={features}
+          stages={stages}
           issues={filteredIssues}
           onEditIssue={(i) => setEditTarget({ kind: "issue", data: i })}
           onDeleteIssue={handleDeleteIssue}
           loading={loading || issuesLoading}
+          selectedIssues={selectedIssues}
+          toggleIssueSelected={toggleIssueSelected}
+          clearSelectedIssues={clearSelectedIssues}
+          onReload={() => reloadStructure().then(() => reloadIssues())}
         />
       )}
 
@@ -1204,24 +1331,38 @@ function IssueTableCompact({
   );
 }
 
-// ─── Layout C — flat spreadsheet ────────────────────────────────────────────
+// ─── Layout C — flat spreadsheet (with multi-select + batch ops) ────────────
 
 function LayoutCSpreadsheet({
+  slug,
+  pid,
   modules,
   requirements,
   features,
+  stages,
   issues,
   onEditIssue,
   onDeleteIssue,
   loading,
+  selectedIssues,
+  toggleIssueSelected,
+  clearSelectedIssues,
+  onReload,
 }: {
+  slug: string;
+  pid: string;
   modules: IModule[];
   requirements: IRequirement[];
   features: IFeature[];
+  stages: IStage[];
   issues: TFeatureIssue[];
   onEditIssue: (i: TFeatureIssue) => void;
   onDeleteIssue: (i: TFeatureIssue) => void;
   loading: boolean;
+  selectedIssues: Set<string>;
+  toggleIssueSelected: (id: string) => void;
+  clearSelectedIssues: () => void;
+  onReload: () => void;
 }) {
   const modById = useMemo(() => Object.fromEntries(modules.map((m) => [m.id, m])), [modules]);
   const reqById = useMemo(() => Object.fromEntries(requirements.map((r) => [r.id, r])), [requirements]);
@@ -1264,6 +1405,54 @@ function LayoutCSpreadsheet({
     return arr;
   }, [issues, search, sort]);
 
+  // W6 — bulk action handlers
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const selectedList = sortedIssues.filter((i) => selectedIssues.has(i.id));
+  const allVisibleSelected = sortedIssues.length > 0 && sortedIssues.every((i) => selectedIssues.has(i.id));
+
+  const toggleAllVisible = () => {
+    if (allVisibleSelected) {
+      sortedIssues.forEach((i) => selectedIssues.has(i.id) && toggleIssueSelected(i.id));
+    } else {
+      sortedIssues.forEach((i) => !selectedIssues.has(i.id) && toggleIssueSelected(i.id));
+    }
+  };
+
+  const bulkUpdateStage = async (stageId: string | null) => {
+    if (!selectedList.length) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(
+        selectedList.map((i) =>
+          issueService.patchIssue(slug, pid, i.id, { stage: stageId, process_step: null } as any)
+        )
+      );
+      setToast({ type: TOAST_TYPE.SUCCESS, title: `已更新 ${selectedList.length} 筆階段` });
+      clearSelectedIssues();
+      onReload();
+    } catch (e) {
+      setToast({ type: TOAST_TYPE.ERROR, title: "批次更新失敗", message: (e as { detail?: string })?.detail ?? "" });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (!selectedList.length) return;
+    if (!confirm(`刪除選取的 ${selectedList.length} 筆工作項目？`)) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(selectedList.map((i) => issueService.deleteIssue(slug, pid, i.id)));
+      setToast({ type: TOAST_TYPE.SUCCESS, title: `已刪除 ${selectedList.length} 筆` });
+      clearSelectedIssues();
+      onReload();
+    } catch (e) {
+      setToast({ type: TOAST_TYPE.ERROR, title: "刪除失敗", message: (e as { detail?: string })?.detail ?? "" });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   if (loading) return <div className="flex items-center justify-center h-72 text-tertiary text-13">載入中…</div>;
 
   return (
@@ -1289,10 +1478,63 @@ function LayoutCSpreadsheet({
         </span>
       </div>
 
+      {/* W6 — bulk action toolbar (shown when any selected) */}
+      {selectedList.length > 0 && (
+        <div className="rounded-md border border-blue-500 bg-blue-500/5 px-3 py-2 mb-2 flex items-center gap-3 flex-wrap text-12">
+          <span className="text-blue-600 font-medium">已選 {selectedList.length} 筆</span>
+          <span className="text-tertiary">·</span>
+          <span>批次設定階段：</span>
+          <select
+            disabled={bulkBusy}
+            onChange={(e) => {
+              if (e.target.value) bulkUpdateStage(e.target.value);
+              e.target.value = "";
+            }}
+            className="rounded border border-subtle bg-surface-1 px-2 py-1 text-12"
+            defaultValue=""
+          >
+            <option value="" disabled>— 選擇階段 —</option>
+            {stages
+              .filter((s) => s.key !== "unsorted")
+              .sort((a, b) => a.sort_order - b.sort_order)
+              .map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => bulkUpdateStage(null)}
+            disabled={bulkBusy}
+            className="text-11 text-tertiary hover:underline"
+          >
+            清除階段
+          </button>
+          <button
+            type="button"
+            onClick={bulkDelete}
+            disabled={bulkBusy}
+            className="ml-auto text-11 text-rose-600 hover:underline"
+          >
+            刪除選取
+          </button>
+          <button
+            type="button"
+            onClick={clearSelectedIssues}
+            disabled={bulkBusy}
+            className="text-11 text-tertiary hover:underline"
+          >
+            取消選取
+          </button>
+        </div>
+      )}
+
       <div className="rounded-md border border-subtle bg-surface-1 overflow-hidden">
         <table className="w-full text-12">
           <thead className="bg-surface-2 text-11 text-tertiary sticky top-0">
             <tr>
+              <th className="px-2 py-1.5 w-8">
+                <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} className="accent-blue-500" />
+              </th>
               <th className="text-left px-2 py-1.5 w-12">#</th>
               <th className="text-left px-2 py-1.5">名稱</th>
               <th className="text-left px-2 py-1.5 w-24">階段</th>
@@ -1304,25 +1546,42 @@ function LayoutCSpreadsheet({
             </tr>
           </thead>
           <tbody>
-            {sortedIssues.map((i) => (
-              <tr key={i.id} className="group border-t border-subtle hover:bg-surface-2/40">
-                <td className="px-2 py-1 font-mono text-10 text-tertiary">#{i.sequence_id}</td>
-                <td className="px-2 py-1 truncate max-w-md">{i.name}</td>
-                <td className="px-2 py-1 text-tertiary">{i.stage_name ?? "—"}</td>
-                <td className="px-2 py-1 text-tertiary">{i.process_step_name ?? "—"}</td>
-                <td className="px-2 py-1 text-tertiary">{i.state_name ?? "—"}</td>
-                <td className="px-2 py-1 text-right font-mono">
-                  {i.estimate_hours != null ? `${i.estimate_hours}` : "—"}
-                </td>
-                <td className="px-2 py-1 text-right font-mono">
-                  {i.actual_hours != null ? `${i.actual_hours}` : "—"}
-                </td>
-                <td className="px-2 py-1 text-right">
-                  <NodeActionBtn icon={Pencil} title="編輯" onClick={() => onEditIssue(i)} />
-                  <NodeActionBtn icon={Trash2} title="刪除" danger onClick={() => onDeleteIssue(i)} />
-                </td>
-              </tr>
-            ))}
+            {sortedIssues.map((i) => {
+              const isChecked = selectedIssues.has(i.id);
+              return (
+                <tr
+                  key={i.id}
+                  className={cn(
+                    "group border-t border-subtle hover:bg-surface-2/40",
+                    isChecked && "bg-blue-500/5"
+                  )}
+                >
+                  <td className="px-2 py-1">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleIssueSelected(i.id)}
+                      className="accent-blue-500"
+                    />
+                  </td>
+                  <td className="px-2 py-1 font-mono text-10 text-tertiary">#{i.sequence_id}</td>
+                  <td className="px-2 py-1 truncate max-w-md">{i.name}</td>
+                  <td className="px-2 py-1 text-tertiary">{i.stage_name ?? "—"}</td>
+                  <td className="px-2 py-1 text-tertiary">{i.process_step_name ?? "—"}</td>
+                  <td className="px-2 py-1 text-tertiary">{i.state_name ?? "—"}</td>
+                  <td className="px-2 py-1 text-right font-mono">
+                    {i.estimate_hours != null ? `${i.estimate_hours}` : "—"}
+                  </td>
+                  <td className="px-2 py-1 text-right font-mono">
+                    {i.actual_hours != null ? `${i.actual_hours}` : "—"}
+                  </td>
+                  <td className="px-2 py-1 text-right">
+                    <NodeActionBtn icon={Pencil} title="編輯" onClick={() => onEditIssue(i)} />
+                    <NodeActionBtn icon={Trash2} title="刪除" danger onClick={() => onDeleteIssue(i)} />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
