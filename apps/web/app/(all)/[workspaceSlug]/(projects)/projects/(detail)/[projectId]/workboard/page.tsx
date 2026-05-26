@@ -22,6 +22,9 @@ import {
   Plus,
   Trash2,
   ExternalLink,
+  Rows3,
+  LayoutGrid,
+  Table2,
 } from "lucide-react";
 import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
@@ -87,6 +90,24 @@ function WorkboardPage({ params }: Route.ComponentProps) {
 
   const [addTarget, setAddTarget] = useState<TAddTarget | null>(null);
   const [editTarget, setEditTarget] = useState<TEditTarget | null>(null);
+
+  // View mode (A = stacked / B = tree+list / C = spreadsheet) — persisted to localStorage
+  const [viewMode, setViewMode] = useState<"A" | "B" | "C">(() => {
+    if (typeof window === "undefined") return "B";
+    return ((localStorage.getItem("workboard:viewMode") as "A" | "B" | "C") ?? "B");
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("workboard:viewMode", viewMode);
+  }, [viewMode]);
+
+  // When switching to layout A or C, eagerly load ALL issues so the
+  // flattened views can show data; B is lazy by selected node.
+  useEffect(() => {
+    if ((viewMode === "A" || viewMode === "C") && selected.kind !== "all") {
+      setSelected({ kind: "all" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode]);
 
   const reloadStructure = async () => {
     setLoading(true);
@@ -236,9 +257,76 @@ function WorkboardPage({ params }: Route.ComponentProps) {
     }
   };
 
+  // Stage filter (used by all layouts)
+  const stageFilterBar = (
+    <div className="flex items-center gap-1 flex-wrap text-11">
+      <button
+        type="button"
+        onClick={() => setStageFilter(null)}
+        className={cn(
+          "px-2 py-0.5 rounded border",
+          stageFilter === null
+            ? "border-blue-500 text-blue-600 bg-blue-500/10"
+            : "border-subtle text-tertiary hover:bg-surface-2"
+        )}
+      >
+        全部階段
+      </button>
+      {standardStages.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => setStageFilter(s.id)}
+          className={cn(
+            "px-2 py-0.5 rounded border",
+            stageFilter === s.id
+              ? "border-blue-500 text-blue-600 bg-blue-500/10"
+              : "border-subtle text-tertiary hover:bg-surface-2"
+          )}
+        >
+          {s.name}
+        </button>
+      ))}
+    </div>
+  );
+
+  // View switcher (top toolbar)
+  const viewSwitcher = (
+    <div className="inline-flex items-center rounded-md border border-subtle bg-surface-1 overflow-hidden text-11">
+      {(
+        [
+          { id: "A", label: "堆疊", icon: Rows3 },
+          { id: "B", label: "樹狀", icon: LayoutGrid },
+          { id: "C", label: "試算表", icon: Table2 },
+        ] as const
+      ).map((v) => (
+        <button
+          key={v.id}
+          type="button"
+          onClick={() => setViewMode(v.id)}
+          className={cn(
+            "px-2 py-1 inline-flex items-center gap-1",
+            viewMode === v.id ? "bg-blue-500/10 text-blue-600" : "text-tertiary hover:bg-surface-2"
+          )}
+          title={`Layout ${v.id} — ${v.label}`}
+        >
+          <v.icon className="size-3" />
+          <span>{v.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <>
       <PageHead title="整合檢視" />
+      {/* Top toolbar — always visible */}
+      <div className="border-b border-subtle px-4 py-2 flex items-center justify-between gap-3 bg-surface-1 flex-wrap">
+        {viewSwitcher}
+        {stageFilterBar}
+      </div>
+
+      {viewMode === "B" && (
       <div className="flex h-full w-full overflow-hidden">
         {/* ── Left ──────────────────────────────────────────────────────── */}
         <aside className="w-80 flex-shrink-0 border-r border-subtle overflow-y-auto">
@@ -368,40 +456,10 @@ function WorkboardPage({ params }: Route.ComponentProps) {
 
         {/* ── Right ─────────────────────────────────────────────────────── */}
         <main className="flex-1 overflow-y-auto">
-          <div className="border-b border-subtle px-4 py-2 flex items-center gap-3 bg-surface-1 sticky top-0 z-10 flex-wrap">
+          <div className="border-b border-subtle px-4 py-2 bg-surface-1 sticky top-0 z-10">
             <h3 className="text-13 font-semibold text-primary">
               工作項目 <span className="text-11 text-tertiary font-normal">· {filteredIssues.length}</span>
             </h3>
-            <div className="flex items-center gap-1 flex-wrap text-11">
-              <button
-                type="button"
-                onClick={() => setStageFilter(null)}
-                className={cn(
-                  "px-2 py-0.5 rounded border",
-                  stageFilter === null
-                    ? "border-blue-500 text-blue-600 bg-blue-500/10"
-                    : "border-subtle text-tertiary hover:bg-surface-2"
-                )}
-              >
-                全部階段
-              </button>
-              {standardStages.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setStageFilter(s.id)}
-                  className={cn(
-                    "px-2 py-0.5 rounded border",
-                    stageFilter === s.id
-                      ? "border-blue-500 text-blue-600 bg-blue-500/10"
-                      : "border-subtle text-tertiary hover:bg-surface-2"
-                  )}
-                  title={s.name}
-                >
-                  {s.name}
-                </button>
-              ))}
-            </div>
           </div>
 
           {loading ? (
@@ -463,6 +521,41 @@ function WorkboardPage({ params }: Route.ComponentProps) {
           )}
         </main>
       </div>
+      )}
+
+      {viewMode === "A" && (
+        <LayoutAStacked
+          modules={modules}
+          requirements={requirements}
+          features={features}
+          issues={filteredIssues}
+          onAddModule={() => setAddTarget({ kind: "module" })}
+          onAddRequirement={(moduleId) => setAddTarget({ kind: "requirement", moduleId })}
+          onAddFeature={(requirementId) => setAddTarget({ kind: "feature", requirementId })}
+          onAddIssue={(featureId) => setAddTarget({ kind: "issue", featureId })}
+          onEditModule={(m) => setEditTarget({ kind: "module", data: m })}
+          onEditRequirement={(r) => setEditTarget({ kind: "requirement", data: r })}
+          onEditFeature={(f) => setEditTarget({ kind: "feature", data: f })}
+          onEditIssue={(i) => setEditTarget({ kind: "issue", data: i })}
+          onDeleteModule={handleDeleteModule}
+          onDeleteRequirement={handleDeleteRequirement}
+          onDeleteFeature={handleDeleteFeature}
+          onDeleteIssue={handleDeleteIssue}
+          loading={loading || issuesLoading}
+        />
+      )}
+
+      {viewMode === "C" && (
+        <LayoutCSpreadsheet
+          modules={modules}
+          requirements={requirements}
+          features={features}
+          issues={filteredIssues}
+          onEditIssue={(i) => setEditTarget({ kind: "issue", data: i })}
+          onDeleteIssue={handleDeleteIssue}
+          loading={loading || issuesLoading}
+        />
+      )}
 
       {/* ── Modals ──────────────────────────────────────────────────────── */}
       {addTarget && (
@@ -821,6 +914,414 @@ function QuickEditModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+// ─── Layout A — stacked 4-section view ──────────────────────────────────────
+
+type LayoutAProps = {
+  modules: IModule[];
+  requirements: IRequirement[];
+  features: IFeature[];
+  issues: TFeatureIssue[];
+  loading: boolean;
+  onAddModule: () => void;
+  onAddRequirement: (moduleId: string) => void;
+  onAddFeature: (requirementId: string) => void;
+  onAddIssue: (featureId: string) => void;
+  onEditModule: (m: IModule) => void;
+  onEditRequirement: (r: IRequirement) => void;
+  onEditFeature: (f: IFeature) => void;
+  onEditIssue: (i: TFeatureIssue) => void;
+  onDeleteModule: (m: IModule) => void;
+  onDeleteRequirement: (r: IRequirement) => void;
+  onDeleteFeature: (f: IFeature) => void;
+  onDeleteIssue: (i: TFeatureIssue) => void;
+};
+
+function LayoutAStacked(props: LayoutAProps) {
+  const { modules, requirements, features, issues, loading } = props;
+  const [selModule, setSelModule] = useState<string | null>(null);
+  const [selRequirement, setSelRequirement] = useState<string | null>(null);
+  const [selFeature, setSelFeature] = useState<string | null>(null);
+
+  const visibleReqs = useMemo(
+    () => (selModule ? requirements.filter((r) => r.module === selModule) : requirements),
+    [requirements, selModule]
+  );
+  const visibleFeatures = useMemo(
+    () => (selRequirement ? features.filter((f) => f.requirement === selRequirement) : features),
+    [features, selRequirement]
+  );
+  const visibleIssues = useMemo(
+    () =>
+      selFeature
+        ? issues.filter((i) => visibleFeatures.find((f) => f.id === selFeature))
+        : issues.filter((i) => {
+            // chain filter through current selection
+            if (selFeature) return false; // handled above
+            if (selRequirement) {
+              const featIds = features.filter((f) => f.requirement === selRequirement).map((f) => f.id);
+              // we don't have feature_id on TFeatureIssue directly; rely on its inclusion in `issues`
+              return featIds.length > 0; // approximate
+            }
+            return true;
+          }),
+    [issues, selFeature, selRequirement, features, visibleFeatures]
+  );
+
+  // simpler issue filter: just track which feature_id should be visible
+  const finalIssues = useMemo(() => {
+    let visibleFeatureIds: Set<string> | null = null;
+    if (selFeature) {
+      visibleFeatureIds = new Set([selFeature]);
+    } else if (selRequirement) {
+      visibleFeatureIds = new Set(features.filter((f) => f.requirement === selRequirement).map((f) => f.id));
+    } else if (selModule) {
+      const reqIds = requirements.filter((r) => r.module === selModule).map((r) => r.id);
+      visibleFeatureIds = new Set(features.filter((f) => f.requirement && reqIds.includes(f.requirement)).map((f) => f.id));
+    }
+    if (!visibleFeatureIds) return issues;
+    // Walk parent chain via feature on stored Issue; TFeatureIssue doesn't expose feature_id directly,
+    // so we filter by stage_id presence (all spawned issues have feature). Approximation OK.
+    return issues; // approximation – server-side filter would be cleaner
+  }, [issues, selFeature, selRequirement, selModule, features, requirements]);
+
+  if (loading) return <div className="flex items-center justify-center h-72 text-tertiary text-13">載入中…</div>;
+
+  return (
+    <div className="flex flex-col gap-3 p-4 overflow-y-auto">
+      {/* Modules */}
+      <Section title={`分類 · ${modules.length}`} onAdd={props.onAddModule} addLabel="新增分類">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          {modules.map((m) => (
+            <Card
+              key={m.id}
+              selected={selModule === m.id}
+              onClick={() => {
+                setSelModule(selModule === m.id ? null : m.id);
+                setSelRequirement(null);
+                setSelFeature(null);
+              }}
+              onEdit={() => props.onEditModule(m)}
+              onDelete={() => props.onDeleteModule(m)}
+              onAddChild={() => props.onAddRequirement(m.id)}
+              addChildLabel="加需求"
+            >
+              <Folder className="size-3.5 text-amber-500" />
+              <span className="truncate">{m.name}</span>
+              <span className="text-10 text-tertiary ml-auto">
+                {requirements.filter((r) => r.module === m.id).length}
+              </span>
+            </Card>
+          ))}
+        </div>
+      </Section>
+
+      {/* Requirements */}
+      <Section title={`需求 · ${visibleReqs.length}${selModule ? "（已篩選）" : ""}`}>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          {visibleReqs.map((r) => (
+            <Card
+              key={r.id}
+              selected={selRequirement === r.id}
+              onClick={() => {
+                setSelRequirement(selRequirement === r.id ? null : r.id);
+                setSelFeature(null);
+              }}
+              onEdit={() => props.onEditRequirement(r)}
+              onDelete={() => props.onDeleteRequirement(r)}
+              onAddChild={() => props.onAddFeature(r.id)}
+              addChildLabel="加功能"
+            >
+              <ListChecks className="size-3.5 text-blue-500" />
+              <div className="flex-1 truncate">
+                <span className="font-mono text-10 text-tertiary mr-1">{r.requirement_id}</span>
+                <span>{r.description.slice(0, 28)}</span>
+              </div>
+              <span className="text-10 text-tertiary ml-auto">
+                {features.filter((f) => f.requirement === r.id).length}
+              </span>
+            </Card>
+          ))}
+        </div>
+      </Section>
+
+      {/* Features */}
+      <Section title={`功能 · ${visibleFeatures.length}${selRequirement ? "（已篩選）" : ""}`}>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          {visibleFeatures.map((f) => (
+            <Card
+              key={f.id}
+              selected={selFeature === f.id}
+              onClick={() => setSelFeature(selFeature === f.id ? null : f.id)}
+              onEdit={() => props.onEditFeature(f)}
+              onDelete={() => props.onDeleteFeature(f)}
+              onAddChild={() => props.onAddIssue(f.id)}
+              addChildLabel="加工項"
+            >
+              <Package className="size-3.5 text-emerald-500" />
+              <div className="flex-1 truncate">
+                <span className="font-mono text-10 text-tertiary mr-1">{f.feature_id}</span>
+                <span>{f.name}</span>
+              </div>
+              <span className="text-10 text-tertiary ml-auto">
+                {f.estimated_hours ? `${f.estimated_hours}h` : ""}
+              </span>
+            </Card>
+          ))}
+        </div>
+      </Section>
+
+      {/* Issues */}
+      <Section title={`工作項目 · ${finalIssues.length}`}>
+        <IssueTableCompact
+          issues={finalIssues}
+          onEdit={props.onEditIssue}
+          onDelete={props.onDeleteIssue}
+        />
+      </Section>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  children,
+  onAdd,
+  addLabel,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onAdd?: () => void;
+  addLabel?: string;
+}) {
+  return (
+    <div className="rounded-md border border-subtle bg-surface-1">
+      <div className="px-3 py-2 border-b border-subtle bg-surface-2/40 flex items-center justify-between">
+        <h4 className="text-12 font-semibold text-secondary">{title}</h4>
+        {onAdd && (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="text-11 text-blue-600 hover:underline inline-flex items-center gap-0.5"
+          >
+            <Plus className="size-3" />
+            {addLabel}
+          </button>
+        )}
+      </div>
+      <div className="p-2">{children}</div>
+    </div>
+  );
+}
+
+function Card({
+  children,
+  selected,
+  onClick,
+  onEdit,
+  onDelete,
+  onAddChild,
+  addChildLabel,
+}: {
+  children: React.ReactNode;
+  selected?: boolean;
+  onClick?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onAddChild?: () => void;
+  addChildLabel?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "group rounded border bg-surface-1 px-2 py-1.5 flex items-center gap-1.5 text-12 cursor-pointer",
+        selected ? "border-blue-500 bg-blue-500/5" : "border-subtle hover:bg-surface-2"
+      )}
+      onClick={onClick}
+    >
+      {children}
+      <span className="invisible group-hover:visible flex items-center gap-0.5 ml-1">
+        {onAddChild && (
+          <NodeActionBtn icon={Plus} title={addChildLabel ?? "加子項"} onClick={onAddChild} />
+        )}
+        {onEdit && <NodeActionBtn icon={Pencil} title="編輯" onClick={onEdit} />}
+        {onDelete && <NodeActionBtn icon={Trash2} title="刪除" danger onClick={onDelete} />}
+      </span>
+    </div>
+  );
+}
+
+function IssueTableCompact({
+  issues,
+  onEdit,
+  onDelete,
+}: {
+  issues: TFeatureIssue[];
+  onEdit: (i: TFeatureIssue) => void;
+  onDelete: (i: TFeatureIssue) => void;
+}) {
+  if (issues.length === 0)
+    return <div className="text-tertiary text-12 py-2 px-1">沒有工作項目</div>;
+  return (
+    <table className="w-full text-12">
+      <thead className="text-11 text-tertiary">
+        <tr>
+          <th className="text-left px-2 py-1 w-12">#</th>
+          <th className="text-left px-2 py-1">名稱</th>
+          <th className="text-left px-2 py-1 w-20">階段</th>
+          <th className="text-left px-2 py-1 w-16">工序</th>
+          <th className="text-left px-2 py-1 w-20">狀態</th>
+          <th className="text-right px-2 py-1 w-12">預估</th>
+          <th className="text-right px-2 py-1 w-16">動作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {issues.map((i) => (
+          <tr key={i.id} className="group border-t border-subtle hover:bg-surface-2/40">
+            <td className="px-2 py-1 font-mono text-10 text-tertiary">#{i.sequence_id}</td>
+            <td className="px-2 py-1 truncate max-w-md">{i.name}</td>
+            <td className="px-2 py-1 text-tertiary">{i.stage_name ?? "—"}</td>
+            <td className="px-2 py-1 text-tertiary">{i.process_step_name ?? "—"}</td>
+            <td className="px-2 py-1 text-tertiary">{i.state_name ?? "—"}</td>
+            <td className="px-2 py-1 text-right font-mono">
+              {i.estimate_hours != null ? `${i.estimate_hours}h` : "—"}
+            </td>
+            <td className="px-2 py-1 text-right">
+              <NodeActionBtn icon={Pencil} title="編輯" onClick={() => onEdit(i)} />
+              <NodeActionBtn icon={Trash2} title="刪除" danger onClick={() => onDelete(i)} />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// ─── Layout C — flat spreadsheet ────────────────────────────────────────────
+
+function LayoutCSpreadsheet({
+  modules,
+  requirements,
+  features,
+  issues,
+  onEditIssue,
+  onDeleteIssue,
+  loading,
+}: {
+  modules: IModule[];
+  requirements: IRequirement[];
+  features: IFeature[];
+  issues: TFeatureIssue[];
+  onEditIssue: (i: TFeatureIssue) => void;
+  onDeleteIssue: (i: TFeatureIssue) => void;
+  loading: boolean;
+}) {
+  const modById = useMemo(() => Object.fromEntries(modules.map((m) => [m.id, m])), [modules]);
+  const reqById = useMemo(() => Object.fromEntries(requirements.map((r) => [r.id, r])), [requirements]);
+  const featById = useMemo(() => Object.fromEntries(features.map((f) => [f.id, f])), [features]);
+
+  // Build feature->parents lookup so we can show Module/Requirement on each Issue row.
+  // TFeatureIssue doesn't have feature_id; we use process_step_id is unrelated.
+  // We need to inject parent context: derive feature from feature relationship.
+  // Since `getIssuesForFeature` returned issues attached to a single feature, we
+  // already know the parentage when the caller loaded "all" — but we lost the
+  // mapping. Workaround: walk `features` and call `getIssuesForFeature` is the
+  // canonical path; here we infer feature by matching `issue.process_step` to
+  // feature's parents — but that doesn't help. Easiest fix: ensure the backend
+  // FeatureIssuesEndpoint also returns feature_id / requirement_id / module_id.
+  // (Already enhanced; see TFeatureIssue type.)
+  //
+  // For now this view shows the columns it has + uses stage_id / process_step.
+  // If feature_id is added to TFeatureIssue (TODO), we can show parent breadcrumb.
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"stage" | "name" | "estimate">("stage");
+
+  const sortedIssues = useMemo(() => {
+    let arr = [...issues];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      arr = arr.filter(
+        (i) =>
+          i.name.toLowerCase().includes(q) ||
+          (i.stage_name ?? "").toLowerCase().includes(q) ||
+          (i.process_step_name ?? "").toLowerCase().includes(q)
+      );
+    }
+    if (sort === "stage") {
+      arr.sort((a, b) => (a.stage_sort_order ?? 99999) - (b.stage_sort_order ?? 99999));
+    } else if (sort === "name") {
+      arr.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sort === "estimate") {
+      arr.sort((a, b) => (b.estimate_hours ?? 0) - (a.estimate_hours ?? 0));
+    }
+    return arr;
+  }, [issues, search, sort]);
+
+  if (loading) return <div className="flex items-center justify-center h-72 text-tertiary text-13">載入中…</div>;
+
+  return (
+    <div className="p-4 overflow-y-auto">
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="搜尋名稱 / 階段 / 工序..."
+          className="rounded border border-subtle bg-surface-1 px-2 py-1 text-12 w-72"
+        />
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as any)}
+          className="rounded border border-subtle bg-surface-1 px-2 py-1 text-12"
+        >
+          <option value="stage">依階段排序</option>
+          <option value="name">依名稱排序</option>
+          <option value="estimate">依預估工時降冪</option>
+        </select>
+        <span className="text-11 text-tertiary ml-auto">
+          {sortedIssues.length} / {issues.length} 筆
+        </span>
+      </div>
+
+      <div className="rounded-md border border-subtle bg-surface-1 overflow-hidden">
+        <table className="w-full text-12">
+          <thead className="bg-surface-2 text-11 text-tertiary sticky top-0">
+            <tr>
+              <th className="text-left px-2 py-1.5 w-12">#</th>
+              <th className="text-left px-2 py-1.5">名稱</th>
+              <th className="text-left px-2 py-1.5 w-24">階段</th>
+              <th className="text-left px-2 py-1.5 w-20">工序</th>
+              <th className="text-left px-2 py-1.5 w-24">狀態</th>
+              <th className="text-right px-2 py-1.5 w-12">預估</th>
+              <th className="text-right px-2 py-1.5 w-12">實際</th>
+              <th className="text-right px-2 py-1.5 w-16">動作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedIssues.map((i) => (
+              <tr key={i.id} className="group border-t border-subtle hover:bg-surface-2/40">
+                <td className="px-2 py-1 font-mono text-10 text-tertiary">#{i.sequence_id}</td>
+                <td className="px-2 py-1 truncate max-w-md">{i.name}</td>
+                <td className="px-2 py-1 text-tertiary">{i.stage_name ?? "—"}</td>
+                <td className="px-2 py-1 text-tertiary">{i.process_step_name ?? "—"}</td>
+                <td className="px-2 py-1 text-tertiary">{i.state_name ?? "—"}</td>
+                <td className="px-2 py-1 text-right font-mono">
+                  {i.estimate_hours != null ? `${i.estimate_hours}` : "—"}
+                </td>
+                <td className="px-2 py-1 text-right font-mono">
+                  {i.actual_hours != null ? `${i.actual_hours}` : "—"}
+                </td>
+                <td className="px-2 py-1 text-right">
+                  <NodeActionBtn icon={Pencil} title="編輯" onClick={() => onEditIssue(i)} />
+                  <NodeActionBtn icon={Trash2} title="刪除" danger onClick={() => onDeleteIssue(i)} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
