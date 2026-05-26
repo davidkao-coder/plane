@@ -133,9 +133,13 @@ class IssueFilterSet(BaseFilterSet):
     module_id = filters.UUIDFilter(method="filter_module_id")
     module_id__in = UUIDInFilter(method="filter_module_id_in", lookup_expr="in")
 
-    # TMS – Stage (parent of Module/Category)
-    stage_id = filters.UUIDFilter(method="filter_stage_id")
-    stage_id__in = UUIDInFilter(method="filter_stage_id_in", lookup_expr="in")
+    # TMS Phase 1.5 – Stage is now a direct tag on Issue
+    stage_id = filters.UUIDFilter(field_name="stage_id")
+    stage_id__in = UUIDInFilter(field_name="stage_id", lookup_expr="in")
+
+    # TMS Phase 1.5 – Feature is the direct parent of Issue
+    feature_id = filters.UUIDFilter(field_name="feature_id")
+    feature_id__in = UUIDInFilter(field_name="feature_id", lookup_expr="in")
 
     mention_id = filters.UUIDFilter(method="filter_mention_id")
     mention_id__in = UUIDInFilter(method="filter_mention_id_in", lookup_expr="in")
@@ -227,21 +231,8 @@ class IssueFilterSet(BaseFilterSet):
             issue_module__deleted_at__isnull=True,
         )
 
-    def filter_stage_id(self, queryset, name, value):
-        """Filter by stage ID via the module relationship (TMS)."""
-        return Q(
-            issue_module__module__stage_id=value,
-            issue_module__deleted_at__isnull=True,
-            issue_module__module__deleted_at__isnull=True,
-        )
-
-    def filter_stage_id_in(self, queryset, name, value):
-        """Filter by stage IDs (in) via the module relationship (TMS)."""
-        return Q(
-            issue_module__module__stage_id__in=value,
-            issue_module__deleted_at__isnull=True,
-            issue_module__module__deleted_at__isnull=True,
-        )
+    # Note: stage_id / feature_id filters now use direct field_name lookups
+    # (see top of class). Custom methods removed in Phase 1.5.
 
     def filter_mention_id(self, queryset, name, value):
         """Filter by mention ID, excluding soft deleted users"""

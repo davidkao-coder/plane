@@ -121,6 +121,49 @@ class FeatureViewSet(BaseViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class FeatureIssuesEndpoint(BaseAPIView):
+    """List all Issues spawned from a Feature, grouped by Stage.
+
+    GET /workspaces/<slug>/projects/<pid>/features/<fid>/issues/
+    Returns a flat list with stage_key / stage_name / process_step_name
+    expanded so the front-end can group without N+1.
+    """
+
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST])
+    def get(self, request, slug, project_id, feature_id):
+        qs = (
+            Issue.issue_objects.filter(
+                project_id=project_id,
+                workspace__slug=slug,
+                feature_id=feature_id,
+            )
+            .select_related("stage", "process_step", "state")
+            .order_by("stage__sort_order", "process_step__sort_order", "created_at")
+        )
+        data = []
+        for i in qs:
+            data.append(
+                {
+                    "id": str(i.id),
+                    "name": i.name,
+                    "sequence_id": i.sequence_id,
+                    "estimate_hours": float(i.estimate_hours) if i.estimate_hours is not None else None,
+                    "actual_hours": float(i.actual_hours) if i.actual_hours is not None else None,
+                    "stage_id": str(i.stage_id) if i.stage_id else None,
+                    "stage_key": i.stage.key if i.stage else None,
+                    "stage_name": i.stage.name if i.stage else None,
+                    "stage_sort_order": i.stage.sort_order if i.stage else None,
+                    "process_step_id": str(i.process_step_id) if i.process_step_id else None,
+                    "process_step_name": i.process_step.name if i.process_step else None,
+                    "state_id": str(i.state_id) if i.state_id else None,
+                    "state_name": i.state.name if i.state else None,
+                    "state_group": i.state.group if i.state else None,
+                    "created_at": i.created_at.isoformat(),
+                }
+            )
+        return Response(data, status=status.HTTP_200_OK)
+
+
 class RequirementFeatureLinkEndpoint(BaseAPIView):
     """Attach / detach Features under a Requirement (and the reverse listing)."""
 

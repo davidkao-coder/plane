@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { FormProvider, useForm } from "react-hook-form";
 // plane imports
@@ -21,8 +21,15 @@ import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // plane web types
 import type { TProject } from "@/plane-web/types/projects";
+// services – Phase 1.5 templates
+import {
+  ProjectTemplateService,
+  type TProjectTemplate,
+} from "@/services/project-template.service";
 import { ProjectAttributes } from "./attributes";
 import { getProjectFormValues } from "./utils";
+
+const projectTemplateService = new ProjectTemplateService();
 
 export type TCreateProjectFormProps = {
   setToFavorite?: boolean;
@@ -48,6 +55,19 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
   });
   const { handleSubmit, reset, setValue } = methods;
   const { isMobile } = usePlatformOS();
+  // Phase 1.5 — pick a project template to apply after the project is created
+  const [templates, setTemplates] = useState<TProjectTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  useEffect(() => {
+    projectTemplateService
+      .list(workspaceSlug)
+      .then((list) => {
+        setTemplates(list);
+        const def = list.find((t) => t.is_default) ?? list[0];
+        if (def) setSelectedTemplateId(def.id);
+      })
+      .catch(() => setTemplates([]));
+  }, [workspaceSlug]);
   const handleAddToFavorites = (projectId: string) => {
     if (!workspaceSlug) return;
 
@@ -101,11 +121,33 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
           await updateCoverImageStatus(res.id, coverImage);
           await updateProject(workspaceSlug.toString(), res.id, { cover_image_url: coverImage });
         }
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: t("success"),
-          message: t("project_created_successfully"),
-        });
+        // Phase 1.5 — apply selected template (modules + requirements)
+        if (selectedTemplateId) {
+          try {
+            const report = await projectTemplateService.applyToProject(
+              workspaceSlug.toString(),
+              res.id,
+              selectedTemplateId,
+            );
+            setToast({
+              type: TOAST_TYPE.SUCCESS,
+              title: "已套用樣板",
+              message: `${report.template} · ${report.modules_created} 分類 / ${report.requirements_created} 範例需求`,
+            });
+          } catch {
+            setToast({
+              type: TOAST_TYPE.WARNING,
+              title: "樣板套用失敗",
+              message: "專案已建立但樣板沒套上，可至工作區設定再次套用",
+            });
+          }
+        } else {
+          setToast({
+            type: TOAST_TYPE.SUCCESS,
+            title: t("success"),
+            message: t("project_created_successfully"),
+          });
+        }
 
         if (setToFavorite) {
           handleAddToFavorites(res.id);
@@ -176,6 +218,30 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
             setShouldAutoSyncIdentifier={setShouldAutoSyncIdentifier}
           />
           <ProjectAttributes isMobile={isMobile} />
+          {/* Phase 1.5: pick a project type template — auto-applies on create */}
+          {templates.length > 0 && (
+            <div>
+              <label className="text-13 font-medium text-secondary mb-2 block">
+                專案類型樣板
+              </label>
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value)}
+                className="w-full rounded border border-subtle bg-surface-1 px-3 py-2 text-13"
+              >
+                <option value="">不套用樣板（手動建立分類）</option>
+                {templates.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    {tpl.name}
+                    {tpl.modules_count > 0 ? ` · ${tpl.modules_count} 個預設分類` : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-11 text-tertiary mt-1">
+                套用後自動建立業務模組與範例需求。可隨後在專案內修改。
+              </p>
+            </div>
+          )}
         </div>
         <ProjectCreateButtons handleClose={handleClose} />
       </form>

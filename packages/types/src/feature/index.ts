@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  *
- * Feature (功能) – TMS customization. Mapped M:N to Requirement, optionally
- * lives under a Stage.
+ * Feature (功能) – TMS customization (Phase 1.5: strict 1:N under Requirement,
+ * no longer attached to Stage – Stage lives on Issue as a cross-cutting tag).
  */
 
 export interface IFeature {
@@ -14,13 +14,14 @@ export interface IFeature {
   feature_id: string;
   name: string;
   description: string;
-  stage: string | null;
+  /** Phase 1.5 – parent Requirement (1:N). */
+  requirement: string | null;
   estimated_hours: number | null;
   sort_order: number;
   project: string;
   workspace: string;
-  /** Linked requirement UUIDs (read-only convenience field). */
-  requirement_ids: string[];
+  /** Number of auto-spawned Issues, present on create response only. */
+  spawned_issues?: number;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -28,5 +29,5 @@ export interface IFeature {
 }
 
 export type TFeatureWritePayload = Partial<
-  Pick<IFeature, "name" | "description" | "stage" | "estimated_hours" | "sort_order">
+  Pick<IFeature, "name" | "description" | "requirement" | "estimated_hours" | "sort_order">
 >;

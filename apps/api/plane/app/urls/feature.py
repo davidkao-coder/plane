@@ -4,7 +4,7 @@
 
 from django.urls import path
 
-from plane.app.views import FeatureViewSet, RequirementFeatureLinkEndpoint
+from plane.app.views import FeatureViewSet, RequirementFeatureLinkEndpoint, FeatureIssuesEndpoint
 
 
 urlpatterns = [
@@ -23,6 +23,12 @@ urlpatterns = [
             }
         ),
         name="project-feature-detail",
+    ),
+    # Phase 1.5 – list Issues spawned from a Feature (grouped by Stage)
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/features/<uuid:feature_id>/issues/",
+        FeatureIssuesEndpoint.as_view(),
+        name="project-feature-issues",
     ),
     # Requirement ↔ Feature pivot (attach / detach / list)
     path(

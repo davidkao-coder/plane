@@ -16,6 +16,8 @@ export interface IRequirement {
   description: string;
   source: string;
   priority: TRequirementPriority;
+  /** Phase 1.5 – parent Module (business module). Required for new records. */
+  module: string | null;
   project: string;
   workspace: string;
   created_at: string;
@@ -25,5 +27,5 @@ export interface IRequirement {
 }
 
 export type TRequirementWritePayload = Partial<
-  Pick<IRequirement, "description" | "source" | "priority">
+  Pick<IRequirement, "description" | "source" | "priority" | "module">
 >;

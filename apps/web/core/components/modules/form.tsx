@@ -4,13 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 // plane imports
 import { ETabIndices } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { Button } from "@plane/propel/button";
-import type { IModule, IStage } from "@plane/types";
+import type { IModule } from "@plane/types";
 // ui
 import { Input, TextArea } from "@plane/ui";
 import { getDate, renderFormattedPayloadDate, getTabIndex } from "@plane/utils";
@@ -21,10 +21,6 @@ import { ProjectDropdown } from "@/components/dropdowns/project/dropdown";
 import { ModuleStatusSelect } from "@/components/modules";
 // hooks
 import { useUser } from "@/hooks/store/user/user-user";
-// services
-import { StageService } from "@/services/stage.service";
-
-const stageService = new StageService();
 
 type Props = {
   handleFormSubmit: (values: Partial<IModule>, dirtyFields: any) => Promise<void>;
@@ -43,7 +39,6 @@ const defaultValues: Partial<IModule> = {
   description: "",
   status: "backlog",
   lead_id: null,
-  stage_id: null,
   member_ids: [],
 };
 
@@ -73,17 +68,9 @@ export function ModuleForm(props: Props) {
       description: data?.description || "",
       status: data?.status || "backlog",
       lead_id: data?.lead_id || null,
-      stage_id: data?.stage_id || null,
       member_ids: data?.member_ids || [],
     },
   });
-
-  // Stage list for the dropdown – TMS customization
-  const [stages, setStages] = useState<IStage[]>([]);
-  useEffect(() => {
-    if (!workspaceSlug || !projectId) return;
-    stageService.getStages(workspaceSlug, projectId).then(setStages).catch(() => setStages([]));
-  }, [workspaceSlug, projectId]);
 
   const { getIndex } = getTabIndex(ETabIndices.PROJECT_MODULE, isMobile);
 
@@ -235,28 +222,8 @@ export function ModuleForm(props: Props) {
                 </div>
               )}
             />
-            {/* TMS – Stage selector */}
-            <Controller
-              control={control}
-              name="stage_id"
-              render={({ field: { value, onChange } }) => (
-                <div className="h-7 inline-flex items-center rounded border border-subtle px-2 text-12 bg-surface-1">
-                  <select
-                    value={value ?? ""}
-                    onChange={(e) => onChange(e.target.value || null)}
-                    className="bg-transparent outline-none text-12 max-w-[120px]"
-                    aria-label="所屬階段"
-                  >
-                    <option value="">未指定階段</option>
-                    {stages.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            />
+            {/* Phase 1.5: Module no longer belongs to a Stage – the Stage
+                tag now lives on each work item (Issue). Selector removed. */}
             <Controller
               control={control}
               name="member_ids"

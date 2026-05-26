@@ -8,6 +8,24 @@ import { API_BASE_URL } from "@plane/constants";
 import type { IFeature, TFeatureWritePayload } from "@plane/types";
 import { APIService } from "@/services/api.service";
 
+export type TFeatureIssue = {
+  id: string;
+  name: string;
+  sequence_id: number;
+  estimate_hours: number | null;
+  actual_hours: number | null;
+  stage_id: string | null;
+  stage_key: string | null;
+  stage_name: string | null;
+  stage_sort_order: number | null;
+  process_step_id: string | null;
+  process_step_name: string | null;
+  state_id: string | null;
+  state_name: string | null;
+  state_group: string | null;
+  created_at: string;
+};
+
 export class FeatureService extends APIService {
   constructor() {
     super(API_BASE_URL);
@@ -51,6 +69,22 @@ export class FeatureService extends APIService {
 
   async deleteFeature(slug: string, projectId: string, featureId: string): Promise<void> {
     return this.delete(`${this.base(slug, projectId)}/${featureId}/`)
+      .then((r) => r?.data)
+      .catch((e) => {
+        throw e?.response?.data;
+      });
+  }
+
+  /**
+   * Phase 1.5 – list the Issues spawned from this Feature (one per ProcessStep
+   * per Stage). Already sorted by stage.sort_order then step.sort_order.
+   */
+  async getIssuesForFeature(
+    slug: string,
+    projectId: string,
+    featureId: string
+  ): Promise<TFeatureIssue[]> {
+    return this.get(`${this.base(slug, projectId)}/${featureId}/issues/`)
       .then((r) => r?.data)
       .catch((e) => {
         throw e?.response?.data;

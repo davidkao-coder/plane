@@ -1762,6 +1762,9 @@ export default {
           },
         },
       },
+      templates: {
+        title: "樣板管理",
+      },
       webhooks: {
         title: "Webhook",
         add_webhook: "新增 Webhook",

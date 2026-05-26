@@ -168,7 +168,7 @@ from .module.archive import ModuleArchiveUnarchiveEndpoint
 # TMS customization – Stage layer above Module
 from .stage import StageViewSet
 from .requirement import RequirementViewSet
-from .feature import FeatureViewSet, RequirementFeatureLinkEndpoint
+from .feature import FeatureViewSet, RequirementFeatureLinkEndpoint, FeatureIssuesEndpoint
 from .process_template import ProcessTemplateViewSet, ProcessStepBulkEndpoint
 from .project_template import (
     ProjectTemplateViewSet,
