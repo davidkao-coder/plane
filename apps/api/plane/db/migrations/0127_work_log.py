@@ -132,36 +132,53 @@ class Migration(migrations.Migration):
 def _backfill_work_logs(apps):
     """For every Issue with actual_hours > 0 create one WorkLog using
     updated_at::date as log_date, updated_by as user (or created_by fallback),
-    hours = actual_hours, note = "[Migrated]"."""
-    Issue = apps.get_model("db", "Issue")
+    hours = actual_hours, note = "[Migrated]".
+
+    Uses raw SQL because the Issue historical model in a migration context
+    doesn't expose Plane's custom IssueManager (`issue_objects`), and the
+    default `objects` manager isn't installed on it.
+    """
+    from django.db import connection
+
     WorkLog = apps.get_model("db", "WorkLog")
 
+    rows = []
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, project_id, workspace_id,
+                   COALESCE(updated_by_id, created_by_id) AS user_id,
+                   updated_at::date AS log_date,
+                   actual_hours
+              FROM issues
+             WHERE actual_hours IS NOT NULL
+               AND actual_hours > 0
+               AND COALESCE(updated_by_id, created_by_id) IS NOT NULL
+            """
+        )
+        rows = cursor.fetchall()
+
     to_create = []
-    qs = Issue.objects.filter(actual_hours__gt=0).select_related(
-        "project", "workspace"
-    )
-    for issue in qs.iterator():
-        user_id = issue.updated_by_id or issue.created_by_id
-        if user_id is None:
-            # No user we can attribute the log to – skip rather than fail.
-            continue
+    for issue_id, project_id, workspace_id, user_id, log_date, actual_hours in rows:
         # Clamp to allowed range (hours > 0 AND hours <= 24). The original
-        # actual_hours could be > 24 (multiple days of work compressed into one
-        # field); split into 24-hour chunks if so.
-        remaining = float(issue.actual_hours or 0)
-        log_date = issue.updated_at.date()
+        # actual_hours could be > 24 (multiple days of work compressed into
+        # one field); split into 24-hour chunks if so.
+        remaining = float(actual_hours or 0)
         chunk_index = 0
         while remaining > 0:
             this_chunk = min(remaining, 24)
             to_create.append(
                 WorkLog(
-                    issue_id=issue.id,
-                    project_id=issue.project_id,
-                    workspace_id=issue.workspace_id,
+                    issue_id=issue_id,
+                    project_id=project_id,
+                    workspace_id=workspace_id,
                     user_id=user_id,
                     log_date=log_date,
                     hours=round(this_chunk, 2),
-                    note="[Migrated]" if chunk_index == 0 else f"[Migrated chunk {chunk_index + 1}]",
+                    note=(
+                        "[Migrated]" if chunk_index == 0
+                        else f"[Migrated chunk {chunk_index + 1}]"
+                    ),
                     created_by_id=user_id,
                     updated_by_id=user_id,
                 )
