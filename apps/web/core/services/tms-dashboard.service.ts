@@ -144,6 +144,27 @@ export class TMSDashboardService extends APIService {
       });
   }
 
+  async escalateIssue(
+    slug: string,
+    projectId: string,
+    issueId: string,
+    reason: string
+  ): Promise<{ escalated: boolean; notified: number; priority: string }> {
+    return this.post(
+      `/api/workspaces/${slug}/projects/${projectId}/issues/${issueId}/escalate/`,
+      { reason }
+    )
+      .then((r) => r?.data)
+      .catch((e) => {
+        throw e?.response?.data;
+      });
+  }
+
+  /** Build the export-report download URL (auth via session cookie). */
+  exportReportUrl(slug: string, projectId: string): string {
+    return `/api/workspaces/${slug}/projects/${projectId}/export-report/`;
+  }
+
   async getMyHours(
     slug: string,
     opts: { user_id?: string; date_from?: string; date_to?: string } = {}

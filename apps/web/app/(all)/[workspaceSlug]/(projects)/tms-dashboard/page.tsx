@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
 import { Link } from "react-router";
-import { AlertTriangle, ChevronRight, FileText } from "lucide-react";
+import { AlertTriangle, ChevronRight, FileText, Download } from "lucide-react";
 import { Button } from "@plane/propel/button";
 import { cn } from "@plane/utils";
 // components
@@ -170,6 +170,13 @@ function TMSDashboardPage({ params }: Route.ComponentProps) {
                 >
                   <FileText className="size-3" /> 本週週報
                 </button>
+                <a
+                  href={service.exportReportUrl(slug, p.id)}
+                  className="inline-flex items-center gap-0.5 text-11 text-tertiary hover:text-primary hover:underline"
+                  title="下載 Excel 報表"
+                >
+                  <Download className="size-3" /> 匯出 Excel
+                </a>
               </div>
             </div>
           ))}

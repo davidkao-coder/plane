@@ -10,6 +10,8 @@ from plane.app.views import (
     CapacityEndpoint,
     WeeklyReportEndpoint,
     MyHoursEndpoint,
+    IssueEscalateEndpoint,
+    TMSExportEndpoint,
 )
 
 
@@ -38,5 +40,15 @@ urlpatterns = [
         "workspaces/<str:slug>/projects/<uuid:project_id>/weekly-report/",
         WeeklyReportEndpoint.as_view(),
         name="tms-weekly-report",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/export-report/",
+        TMSExportEndpoint.as_view(),
+        name="tms-export-report",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/issues/<uuid:issue_id>/escalate/",
+        IssueEscalateEndpoint.as_view(),
+        name="tms-issue-escalate",
     ),
 ]

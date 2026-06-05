@@ -10,7 +10,8 @@
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { Link } from "react-router";
-import { AlertTriangle, CalendarClock, CalendarDays, Clock, Inbox } from "lucide-react";
+import { AlertTriangle, CalendarClock, CalendarDays, Clock, Flag, Inbox } from "lucide-react";
+import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { cn } from "@plane/utils";
 // components
 import { PageHead } from "@/components/core/page-title";
@@ -58,19 +59,44 @@ function MyQueuePage({ params }: Route.ComponentProps) {
   const [queue, setQueue] = useState<TMyQueue | null>(null);
   const [hours, setHours] = useState<TMyHours | null>(null);
 
-  useEffect(() => {
+  const reloadQueue = () => {
     setLoading(true);
     service
       .getMyQueue(slug)
       .then((q) => setQueue(q))
       .catch((e) => setErr((e as { detail?: string })?.detail ?? "載入失敗"))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    reloadQueue();
     // personal hours (last ~3 weeks) — best effort, non-blocking
     service
       .getMyHours(slug)
       .then((h) => setHours(h as TMyHours))
       .catch(() => setHours(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  const handleEscalate = async (projectId: string, issueId: string) => {
+    const reason = window.prompt("回報這個工作項目遇到的問題（會通知 PM/PC，並標為緊急）：");
+    if (!reason || !reason.trim()) return;
+    try {
+      const res = await service.escalateIssue(slug, projectId, issueId, reason.trim());
+      setToast({
+        type: TOAST_TYPE.SUCCESS,
+        title: "已回報",
+        message: `已通知 ${res.notified} 位負責人並標為緊急`,
+      });
+      reloadQueue();
+    } catch (e) {
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: "回報失敗",
+        message: (e as { error?: string; detail?: string })?.error ?? (e as { detail?: string })?.detail ?? "請再試一次",
+      });
+    }
+  };
 
   return (
     <>
@@ -160,6 +186,16 @@ function MyQueuePage({ params }: Route.ComponentProps) {
                           </td>
                           <td className="px-3 py-2 w-12 text-right font-mono text-tertiary">
                             {i.estimate_hours != null ? `${i.estimate_hours}h` : ""}
+                          </td>
+                          <td className="px-2 py-2 w-8 text-right">
+                            <button
+                              type="button"
+                              title="回報問題 / 卡關"
+                              onClick={() => handleEscalate(i.project_id, i.id)}
+                              className="inline-flex items-center justify-center size-6 rounded hover:bg-rose-500/10"
+                            >
+                              <Flag className="size-3 text-tertiary hover:text-rose-500" />
+                            </button>
                           </td>
                         </tr>
                       ))}

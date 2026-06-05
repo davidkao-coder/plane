@@ -7,3 +7,11 @@ from django.apps import AppConfig
 
 class DbConfig(AppConfig):
     name = "plane.db"
+
+    def ready(self):
+        # Register TMS signals (process-step completion notifications) – Phase 2.
+        try:
+            import plane.db.signals  # noqa: F401
+        except Exception:
+            # Never block app startup on optional signal wiring.
+            pass

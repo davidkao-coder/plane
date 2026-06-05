@@ -188,6 +188,8 @@ from .tms_dashboard import (
     CapacityEndpoint,
     WeeklyReportEndpoint,
     MyHoursEndpoint,
+    IssueEscalateEndpoint,
+    TMSExportEndpoint,
 )
 from .risk import RiskViewSet
 
