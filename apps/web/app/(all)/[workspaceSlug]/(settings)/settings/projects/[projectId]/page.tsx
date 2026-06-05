@@ -19,6 +19,7 @@ import { useUserPermissions } from "@/hooks/store/user";
 import type { Route } from "./+types/page";
 import { GeneralProjectSettingsHeader } from "./header";
 import { GeneralProjectSettingsControlSection } from "@/components/project/settings/control-section";
+import { ClientInfoSection } from "@/components/project/settings/client-info-section";
 
 function ProjectSettingsPage({ params }: Route.ComponentProps) {
   // router
@@ -44,6 +45,9 @@ function ProjectSettingsPage({ params }: Route.ComponentProps) {
           />
         ) : (
           <ProjectDetailsFormLoader />
+        )}
+        {currentProjectDetails && (
+          <ClientInfoSection workspaceSlug={workspaceSlug} projectId={projectId} isAdmin={isAdmin} />
         )}
         {isAdmin && <GeneralProjectSettingsControlSection projectId={projectId} />}
       </div>

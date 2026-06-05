@@ -1,1 +1,6 @@
-from .base import FeatureViewSet, RequirementFeatureLinkEndpoint, FeatureIssuesEndpoint
+from .base import (
+    FeatureViewSet,
+    RequirementFeatureLinkEndpoint,
+    FeatureIssuesEndpoint,
+    FeatureDependencyEndpoint,
+)

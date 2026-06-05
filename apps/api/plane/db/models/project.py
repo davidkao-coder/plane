@@ -128,6 +128,12 @@ class Project(BaseModel):
         blank=True,
         related_name="projects",
     )
+    # TMS Phase 2 — client / contract metadata so PM can identify which
+    # customer a project belongs to at a glance.
+    client_name = models.CharField(max_length=255, blank=True)
+    contract_no = models.CharField(max_length=100, blank=True)
+    client_pic = models.CharField(max_length=255, blank=True)  # person in charge
+    client_contact = models.CharField(max_length=255, blank=True)  # email / phone
 
     def __init__(self, *args, **kwargs):
         # Track if timezone is provided, if so, don't override it with the workspace timezone when saving

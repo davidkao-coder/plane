@@ -31,6 +31,12 @@ export interface IStage {
   updated_by: string | null;
   /** Computed: how many issues are tagged with this stage. */
   total_issues?: number;
+  /** Computed: how many of those issues are completed/cancelled. */
+  completed_issues?: number;
+  /** Computed health: done | overdue | at_risk | on_track | no_target | empty */
+  health?: "done" | "overdue" | "at_risk" | "on_track" | "no_target" | "empty";
+  /** Computed completion fraction 0.0–1.0 */
+  completion_ratio?: number;
 }
 
 export type TStageWritePayload = Partial<

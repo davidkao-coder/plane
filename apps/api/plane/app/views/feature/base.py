@@ -5,13 +5,23 @@
 # Feature ViewSet + auto-spawn workflow – TMS Phase 1.5.
 
 from django.db import transaction
+from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.response import Response
 
 from plane.app.permissions import ROLE, allow_permission
 from plane.app.serializers import FeatureSerializer, RequirementSerializer
-from plane.db.models import Feature, Issue, Requirement, RequirementFeature, Stage, State
+from plane.db.models import (
+    Feature,
+    FeatureDependency,
+    Issue,
+    Requirement,
+    RequirementFeature,
+    Stage,
+    State,
+)
+from plane.utils.tms_health import is_issue_overdue
 
 from .. import BaseAPIView, BaseViewSet
 
@@ -81,6 +91,7 @@ class FeatureViewSet(BaseViewSet):
                 project__archived_at__isnull=True,
             )
             .select_related("project", "workspace", "requirement")
+            .prefetch_related("dependencies")
             .distinct()
         )
 
@@ -147,6 +158,7 @@ class FeatureIssuesEndpoint(BaseAPIView):
             )
             .order_by("stage__sort_order", "process_step__sort_order", "created_at")
         )
+        today = timezone.now().date()
         data = []
         for i in qs:
             feat = i.feature
@@ -159,6 +171,10 @@ class FeatureIssuesEndpoint(BaseAPIView):
                     "sequence_id": i.sequence_id,
                     "estimate_hours": float(i.estimate_hours) if i.estimate_hours is not None else None,
                     "actual_hours": float(i.actual_hours) if i.actual_hours is not None else None,
+                    "target_date": i.target_date.isoformat() if i.target_date else None,
+                    "is_overdue": is_issue_overdue(
+                        i.target_date, i.state.group if i.state else None, today
+                    ),
                     "stage_id": str(i.stage_id) if i.stage_id else None,
                     "stage_key": i.stage.key if i.stage else None,
                     "stage_name": i.stage.name if i.stage else None,
@@ -231,6 +247,74 @@ class RequirementFeatureLinkEndpoint(BaseAPIView):
         RequirementFeature.objects.filter(
             requirement_id=requirement_id,
             feature_id=fid,
+            project_id=project_id,
+            workspace__slug=slug,
+        ).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FeatureDependencyEndpoint(BaseAPIView):
+    """Manage Feature → Feature dependencies (B3).
+
+    GET    /features/<fid>/dependencies/                 list prerequisites
+    POST   /features/<fid>/dependencies/  {depends_on_id}  add prerequisite
+    DELETE /features/<fid>/dependencies/<depends_on_id>/   remove prerequisite
+    """
+
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST])
+    def get(self, request, slug, project_id, feature_id):
+        ids = FeatureDependency.objects.filter(
+            project_id=project_id,
+            workspace__slug=slug,
+            feature_id=feature_id,
+            deleted_at__isnull=True,
+        ).values_list("depends_on_id", flat=True)
+        features = Feature.objects.filter(id__in=ids)
+        return Response(FeatureSerializer(features, many=True).data, status=status.HTTP_200_OK)
+
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER])
+    def post(self, request, slug, project_id, feature_id):
+        depends_on_id = request.data.get("depends_on_id")
+        if not depends_on_id:
+            return Response({"error": "depends_on_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if str(depends_on_id) == str(feature_id):
+            return Response({"error": "A feature cannot depend on itself"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            Feature.objects.get(pk=feature_id, project_id=project_id, workspace__slug=slug)
+            Feature.objects.get(pk=depends_on_id, project_id=project_id, workspace__slug=slug)
+        except Feature.DoesNotExist:
+            return Response({"error": "Feature not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Prevent a direct 2-cycle (A depends on B while B depends on A)
+        reverse_exists = FeatureDependency.objects.filter(
+            feature_id=depends_on_id,
+            depends_on_id=feature_id,
+            deleted_at__isnull=True,
+        ).exists()
+        if reverse_exists:
+            return Response(
+                {"error": "Circular dependency: the other feature already depends on this one"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        link, created = FeatureDependency.objects.get_or_create(
+            feature_id=feature_id,
+            depends_on_id=depends_on_id,
+            defaults={"project_id": project_id},
+        )
+        return Response(
+            {"linked": True, "created": created, "id": str(link.id)},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER])
+    def delete(self, request, slug, project_id, feature_id, depends_on_id=None):
+        dep_id = depends_on_id or request.data.get("depends_on_id")
+        if not dep_id:
+            return Response({"error": "depends_on_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        FeatureDependency.objects.filter(
+            feature_id=feature_id,
+            depends_on_id=dep_id,
             project_id=project_id,
             workspace__slug=slug,
         ).delete()

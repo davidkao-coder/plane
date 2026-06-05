@@ -59,6 +59,11 @@ export interface IProject extends IPartialProject {
   members?: string[];
   timezone?: string;
   next_work_item_sequence?: number;
+  // TMS Phase 2 – client / contract metadata
+  client_name?: string;
+  contract_no?: string;
+  client_pic?: string;
+  client_contact?: string;
 }
 
 export type TProjectAnalyticsCountParams = {

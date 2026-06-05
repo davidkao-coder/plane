@@ -20,6 +20,7 @@ import { Input, TextArea } from "@plane/ui";
 import { cn } from "@plane/utils";
 // components
 import { PageHead } from "@/components/core/page-title";
+import { HealthBadge, CompletionBar } from "@/components/tms/health-badge";
 // services
 import { StageService } from "@/services/stage.service";
 import type { Route } from "./+types/page";
@@ -113,7 +114,8 @@ function ProjectStagesPage({ params }: Route.ComponentProps) {
               <thead className="bg-surface-2 text-12 font-semibold text-secondary">
                 <tr>
                   <th className="text-left px-3 py-2">名稱</th>
-                  <th className="text-left px-3 py-2">描述</th>
+                  <th className="text-left px-3 py-2 w-20">健康度</th>
+                  <th className="text-left px-3 py-2 w-32">進度</th>
                   <th className="text-right px-3 py-2">工作項目數</th>
                   <th className="text-left px-3 py-2">起始</th>
                   <th className="text-left px-3 py-2">截止</th>
@@ -124,8 +126,11 @@ function ProjectStagesPage({ params }: Route.ComponentProps) {
                 {ordered.map((s) => (
                   <tr key={s.id} className="border-t border-subtle hover:bg-surface-2/40">
                     <td className="px-3 py-2 font-medium text-primary">{s.name}</td>
-                    <td className="px-3 py-2 text-tertiary truncate max-w-md">{s.description || "—"}</td>
-                    <td className="px-3 py-2 text-right">{s.total_issues ?? 0}</td>
+                    <td className="px-3 py-2"><HealthBadge health={s.health} /></td>
+                    <td className="px-3 py-2"><CompletionBar ratio={s.completion_ratio} /></td>
+                    <td className="px-3 py-2 text-right">
+                      {s.completed_issues ?? 0}/{s.total_issues ?? 0}
+                    </td>
                     <td className="px-3 py-2 text-tertiary">{s.start_date ?? "—"}</td>
                     <td className="px-3 py-2 text-tertiary">{s.target_date ?? "—"}</td>
                     <td className="px-3 py-2 text-right">

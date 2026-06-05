@@ -38,7 +38,15 @@ class StageViewSet(BaseViewSet):
                 total_issues=Count(
                     "stage_issues",
                     filter=Q(stage_issues__deleted_at__isnull=True),
-                )
+                ),
+                # Phase 2: completed issues feed the health computation.
+                completed_issues=Count(
+                    "stage_issues",
+                    filter=Q(
+                        stage_issues__deleted_at__isnull=True,
+                        stage_issues__state__group__in=["completed", "cancelled"],
+                    ),
+                ),
             )
             .select_related("project", "workspace", "process_template")
             .distinct()

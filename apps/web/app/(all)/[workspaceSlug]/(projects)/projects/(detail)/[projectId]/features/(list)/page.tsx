@@ -12,7 +12,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
-import { ListTree, Pencil, Plus, Trash2 } from "lucide-react";
+import { ListTree, Link2, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type {
@@ -52,6 +52,7 @@ function ProjectFeaturesPage({ params }: Route.ComponentProps) {
   const [filterModule, setFilterModule] = useState<string>("");
   const [filterRequirement, setFilterRequirement] = useState<string>("");
   const [viewingWorkflow, setViewingWorkflow] = useState<IFeature | null>(null);
+  const [editingDeps, setEditingDeps] = useState<IFeature | null>(null);
 
   const reload = async () => {
     try {
@@ -226,6 +227,14 @@ function ProjectFeaturesPage({ params }: Route.ComponentProps) {
                         <button
                           type="button"
                           className="inline-flex items-center justify-center size-7 rounded hover:bg-black/[0.05]"
+                          onClick={() => setEditingDeps(f)}
+                          title="依賴關係"
+                        >
+                          <Link2 className={cn("size-3.5", (f.depends_on_ids?.length ?? 0) > 0 ? "text-amber-500" : "text-tertiary")} />
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center size-7 rounded hover:bg-black/[0.05]"
                           onClick={() => setEditing(f)}
                         >
                           <Pencil className="size-3.5 text-tertiary" />
@@ -252,6 +261,20 @@ function ProjectFeaturesPage({ params }: Route.ComponentProps) {
             projectId={pid}
             feature={viewingWorkflow}
             onClose={() => setViewingWorkflow(null)}
+          />
+        )}
+
+        {editingDeps && (
+          <FeatureDependencyModal
+            workspaceSlug={slug}
+            projectId={pid}
+            feature={editingDeps}
+            allFeatures={features}
+            onClose={() => setEditingDeps(null)}
+            onSaved={() => {
+              setEditingDeps(null);
+              reload();
+            }}
           />
         )}
 
@@ -570,6 +593,91 @@ function FeatureWorkflowModal({
           <Button variant="primary" size="sm" onClick={onClose}>
             關閉
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Feature dependency modal (B3) ───────────────────────────────────────────
+// Pick which other features this feature is blocked by (must finish first).
+
+function FeatureDependencyModal({
+  workspaceSlug,
+  projectId,
+  feature,
+  allFeatures,
+  onClose,
+  onSaved,
+}: {
+  workspaceSlug: string;
+  projectId: string;
+  feature: IFeature;
+  allFeatures: IFeature[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const initial = useMemo(() => new Set(feature.depends_on_ids ?? []), [feature]);
+  const [selected, setSelected] = useState<Set<string>>(initial);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const candidates = allFeatures.filter((f) => f.id !== feature.id);
+
+  const toggle = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    setErr("");
+    setBusy(true);
+    try {
+      const toAdd = [...selected].filter((id) => !initial.has(id));
+      const toRemove = [...initial].filter((id) => !selected.has(id));
+      for (const id of toAdd) {
+        await featureService.addDependency(workspaceSlug, projectId, feature.id, id);
+      }
+      for (const id of toRemove) {
+        await featureService.removeDependency(workspaceSlug, projectId, feature.id, id);
+      }
+      setToast({ type: TOAST_TYPE.SUCCESS, title: "已更新依賴" });
+      onSaved();
+    } catch (e) {
+      setErr((e as { error?: string; detail?: string })?.error ?? (e as { detail?: string })?.detail ?? "儲存失敗");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-lg border border-subtle bg-surface-1 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-3 border-b border-subtle">
+          <h3 className="text-14 font-semibold text-primary">
+            依賴關係 · <span className="font-mono text-12 text-tertiary">{feature.feature_id}</span> {feature.name}
+          </h3>
+          <p className="text-11 text-tertiary mt-0.5">勾選此功能「必須等哪些功能先完成」（前置依賴）</p>
+        </div>
+        <div className="flex flex-col gap-1 px-5 py-4 max-h-96 overflow-y-auto">
+          {candidates.length === 0 && (
+            <div className="text-tertiary text-13 py-6 text-center">沒有其他功能可作為前置依賴</div>
+          )}
+          {candidates.map((f) => (
+            <label key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-surface-2/60 cursor-pointer">
+              <input type="checkbox" checked={selected.has(f.id)} onChange={() => toggle(f.id)} className="accent-blue-500" />
+              <span className="font-mono text-11 text-tertiary">{f.feature_id}</span>
+              <span className="text-13 text-primary truncate">{f.name}</span>
+            </label>
+          ))}
+          {err && <div className="text-12 text-rose-500">{err}</div>}
+        </div>
+        <div className="px-5 py-3 border-t border-subtle flex items-center justify-end gap-2">
+          <Button variant="neutral-primary" size="sm" onClick={onClose} disabled={busy}>取消</Button>
+          <Button variant="primary" size="sm" onClick={handleSave} loading={busy}>儲存</Button>
         </div>
       </div>
     </div>

@@ -113,6 +113,30 @@ export const coreRoutes: RouteConfigEntry[] = [
           ),
         ]),
 
+        // TMS Phase 2 – cross-project dashboard (PM)
+        layout("./(all)/[workspaceSlug]/(projects)/tms-dashboard/layout.tsx", [
+          route(
+            ":workspaceSlug/tms-dashboard",
+            "./(all)/[workspaceSlug]/(projects)/tms-dashboard/page.tsx"
+          ),
+        ]),
+
+        // TMS Phase 2 – personal task queue (dev / lead)
+        layout("./(all)/[workspaceSlug]/(projects)/my-queue/layout.tsx", [
+          route(
+            ":workspaceSlug/my-queue",
+            "./(all)/[workspaceSlug]/(projects)/my-queue/page.tsx"
+          ),
+        ]),
+
+        // TMS Phase 2 / B3 – resource capacity planner (PC)
+        layout("./(all)/[workspaceSlug]/(projects)/capacity/layout.tsx", [
+          route(
+            ":workspaceSlug/capacity",
+            "./(all)/[workspaceSlug]/(projects)/capacity/page.tsx"
+          ),
+        ]),
+
         // Workspace Views
         layout("./(all)/[workspaceSlug]/(projects)/workspace-views/layout.tsx", [
           route(":workspaceSlug/workspace-views", "./(all)/[workspaceSlug]/(projects)/workspace-views/page.tsx"),

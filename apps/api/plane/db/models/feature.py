@@ -91,3 +91,34 @@ class RequirementFeature(ProjectBaseModel):
         verbose_name = "Requirement-Feature Link"
         verbose_name_plural = "Requirement-Feature Links"
         db_table = "requirement_features"
+
+
+class FeatureDependency(ProjectBaseModel):
+    """`feature` depends on (is blocked by) `depends_on`. Phase 2 / B3.
+
+    Lets the PC express ordering between Features ("整合 LINE Pay 必須等
+    SDK 整合完才能做").
+    """
+
+    feature = models.ForeignKey(
+        "db.Feature",
+        on_delete=models.CASCADE,
+        related_name="dependencies",
+    )
+    depends_on = models.ForeignKey(
+        "db.Feature",
+        on_delete=models.CASCADE,
+        related_name="dependents",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["feature", "depends_on"],
+                condition=Q(deleted_at__isnull=True),
+                name="feature_dependency_unique_when_deleted_at_null",
+            ),
+        ]
+        verbose_name = "Feature Dependency"
+        verbose_name_plural = "Feature Dependencies"
+        db_table = "feature_dependencies"

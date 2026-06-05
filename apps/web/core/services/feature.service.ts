@@ -99,6 +99,36 @@ export class FeatureService extends APIService {
       });
   }
 
+  // ─── Phase 2 / B3 – Feature dependencies ─────────────────────────────────
+
+  async addDependency(
+    slug: string,
+    projectId: string,
+    featureId: string,
+    dependsOnId: string
+  ): Promise<{ linked: boolean; created: boolean }> {
+    return this.post(`${this.base(slug, projectId)}/${featureId}/dependencies/`, {
+      depends_on_id: dependsOnId,
+    })
+      .then((r) => r?.data)
+      .catch((e) => {
+        throw e?.response?.data;
+      });
+  }
+
+  async removeDependency(
+    slug: string,
+    projectId: string,
+    featureId: string,
+    dependsOnId: string
+  ): Promise<void> {
+    return this.delete(`${this.base(slug, projectId)}/${featureId}/dependencies/${dependsOnId}/`)
+      .then((r) => r?.data)
+      .catch((e) => {
+        throw e?.response?.data;
+      });
+  }
+
   // ─── Requirement ↔ Feature pivot ─────────────────────────────────────────
 
   async listFeaturesForRequirement(

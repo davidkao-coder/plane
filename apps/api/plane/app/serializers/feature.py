@@ -10,6 +10,7 @@ from .base import BaseSerializer
 
 class FeatureSerializer(BaseSerializer):
     feature_id = serializers.CharField(read_only=True)
+    depends_on_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = Feature
@@ -24,6 +25,7 @@ class FeatureSerializer(BaseSerializer):
             "sort_order",
             "project",
             "workspace",
+            "depends_on_ids",
             "created_at",
             "updated_at",
             "created_by",
@@ -35,10 +37,21 @@ class FeatureSerializer(BaseSerializer):
             "feature_id",
             "project",
             "workspace",
+            "depends_on_ids",
             "created_at",
             "updated_at",
             "created_by",
             "updated_by",
+        ]
+
+    def get_depends_on_ids(self, obj):
+        # Prerequisite feature ids this feature is blocked by
+        deps = getattr(obj, "dependencies", None)
+        if deps is None:
+            return []
+        return [
+            str(d.depends_on_id)
+            for d in deps.filter(deleted_at__isnull=True)
         ]
 
 

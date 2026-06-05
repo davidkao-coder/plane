@@ -199,6 +199,28 @@ export interface IWorkspaceSidebarNavigationItem {
 }
 
 export const WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS: Record<string, IWorkspaceSidebarNavigationItem> = {
+  // TMS Phase 2 – cross-project dashboard + personal queue
+  my_queue: {
+    key: "my_queue",
+    labelTranslationKey: "sidebar.my_queue",
+    href: `/my-queue/`,
+    access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER, EUserWorkspaceRoles.GUEST],
+    highlight: (pathname: string, url: string) => pathname.includes(url),
+  },
+  tms_dashboard: {
+    key: "tms_dashboard",
+    labelTranslationKey: "sidebar.tms_dashboard",
+    href: `/tms-dashboard/`,
+    access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
+    highlight: (pathname: string, url: string) => pathname.includes(url),
+  },
+  capacity: {
+    key: "capacity",
+    labelTranslationKey: "sidebar.capacity",
+    href: `/capacity/`,
+    access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
+    highlight: (pathname: string, url: string) => pathname.includes(url),
+  },
   views: {
     key: "views",
     labelTranslationKey: "views",
@@ -230,6 +252,9 @@ export const WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS: Record<string, IWorkspa
 };
 
 export const WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS: IWorkspaceSidebarNavigationItem[] = [
+  WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["my_queue"],
+  WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["tms_dashboard"],
+  WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["capacity"],
   WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["views"],
   WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["analytics"],
   WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["projects_overview"],
