@@ -14,6 +14,9 @@ export type TFeatureIssue = {
   sequence_id: number;
   estimate_hours: number | null;
   actual_hours: number | null;
+  start_date: string | null;
+  target_date: string | null;
+  is_overdue: boolean;
   stage_id: string | null;
   stage_key: string | null;
   stage_name: string | null;

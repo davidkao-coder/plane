@@ -270,7 +270,6 @@ class CapacityEndpoint(BaseAPIView):
                 "member_id",
                 "member__display_name",
                 "member__email",
-                "member__avatar_url",
                 "member__role",
             )
             .distinct()
@@ -283,7 +282,6 @@ class CapacityEndpoint(BaseAPIView):
             member_map[mid] = {
                 "user_id": str(mid),
                 "display_name": m["member__display_name"] or m["member__email"],
-                "avatar_url": m["member__avatar_url"],
                 "role": m["member__role"],
                 "capacity": DEFAULT_WEEKLY_CAPACITY,
                 # columns: overdue, week_0..week_{n-1}, undated
@@ -342,6 +340,143 @@ class CapacityEndpoint(BaseAPIView):
                 "week_labels": week_labels,
                 "default_capacity": DEFAULT_WEEKLY_CAPACITY,
                 "members": rows,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class WeeklyReportEndpoint(BaseAPIView):
+    """Auto-generated weekly progress report for a project (PC).
+
+    GET /workspaces/<slug>/projects/<project_id>/weekly-report/
+    Summarises: completed this week, currently in progress, overdue, and
+    planned for next week — so the PC doesn't assemble it by hand.
+    """
+
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST])
+    def get(self, request, slug, project_id):
+        today = timezone.now().date()
+        this_monday = week_start(today)
+        this_sunday = this_monday + timedelta(days=6)
+        next_monday = this_monday + timedelta(days=7)
+        next_sunday = next_monday + timedelta(days=6)
+
+        base = Issue.issue_objects.filter(
+            project_id=project_id, workspace__slug=slug
+        ).select_related("state", "stage")
+
+        def serialize(qs, limit=200):
+            out = []
+            for i in qs[:limit]:
+                out.append(
+                    {
+                        "id": str(i.id),
+                        "sequence_id": i.sequence_id,
+                        "name": i.name,
+                        "state_name": i.state.name if i.state else None,
+                        "stage_name": i.stage.name if i.stage else None,
+                        "target_date": i.target_date.isoformat() if i.target_date else None,
+                    }
+                )
+            return out
+
+        completed_this_week = base.filter(
+            state__group="completed",
+            completed_at__date__gte=this_monday,
+            completed_at__date__lte=this_sunday,
+        )
+        in_progress = base.filter(state__group="started")
+        overdue = base.filter(target_date__lt=today).exclude(
+            state__group__in=["completed", "cancelled"]
+        )
+        planned_next_week = base.filter(
+            target_date__gte=next_monday, target_date__lte=next_sunday
+        ).exclude(state__group__in=["completed", "cancelled"])
+
+        return Response(
+            {
+                "week_start": this_monday.isoformat(),
+                "week_end": this_sunday.isoformat(),
+                "completed_this_week": {
+                    "count": completed_this_week.count(),
+                    "issues": serialize(completed_this_week),
+                },
+                "in_progress": {
+                    "count": in_progress.count(),
+                    "issues": serialize(in_progress),
+                },
+                "overdue": {"count": overdue.count(), "issues": serialize(overdue)},
+                "planned_next_week": {
+                    "count": planned_next_week.count(),
+                    "issues": serialize(planned_next_week),
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class MyHoursEndpoint(BaseAPIView):
+    """Personal work-hours statistics for the current user (or a chosen user).
+
+    GET /workspaces/<slug>/my-hours/?date_from=&date_to=[&user_id=]
+    Aggregates WorkLog hours: total, per-day, per-project.
+    """
+
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST], level="WORKSPACE")
+    def get(self, request, slug):
+        from django.db.models import Sum
+        from plane.db.models import WorkLog
+
+        target_user_id = request.query_params.get("user_id") or request.user.id
+        today = timezone.now().date()
+        date_from = request.query_params.get("date_from") or (
+            week_start(today) - timedelta(days=21)
+        ).isoformat()
+        date_to = request.query_params.get("date_to") or today.isoformat()
+
+        project_ids = ProjectMember.objects.filter(
+            workspace__slug=slug, member=request.user, is_active=True
+        ).values_list("project_id", flat=True)
+
+        logs = WorkLog.objects.filter(
+            project_id__in=project_ids,
+            user_id=target_user_id,
+            log_date__gte=date_from,
+            log_date__lte=date_to,
+            deleted_at__isnull=True,
+        )
+
+        total = float(logs.aggregate(t=Sum("hours")).get("t") or 0)
+
+        by_day_qs = (
+            logs.values("log_date").annotate(h=Sum("hours")).order_by("log_date")
+        )
+        by_day = [
+            {"date": row["log_date"].isoformat(), "hours": float(row["h"] or 0)}
+            for row in by_day_qs
+        ]
+
+        by_project_qs = (
+            logs.values("project_id", "project__name")
+            .annotate(h=Sum("hours"))
+            .order_by("-h")
+        )
+        by_project = [
+            {
+                "project_id": str(row["project_id"]),
+                "project_name": row["project__name"],
+                "hours": float(row["h"] or 0),
+            }
+            for row in by_project_qs
+        ]
+
+        return Response(
+            {
+                "date_from": date_from,
+                "date_to": date_to,
+                "total_hours": total,
+                "by_day": by_day,
+                "by_project": by_project,
             },
             status=status.HTTP_200_OK,
         )

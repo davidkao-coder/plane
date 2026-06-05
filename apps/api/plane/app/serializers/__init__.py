@@ -101,6 +101,7 @@ from .project_template import (
     ProjectTemplateRequirementSerializer,
 )
 from .work_log import WorkLogSerializer
+from .risk import RiskSerializer
 
 from .api import APITokenSerializer, APITokenReadSerializer
 

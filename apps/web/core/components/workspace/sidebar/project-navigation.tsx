@@ -11,7 +11,7 @@ import { useParams, usePathname } from "next/navigation";
 import { EUserPermissionsLevel, EUserPermissions } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { CycleIcon, IntakeIcon, ModuleIcon, PageIcon, ViewsIcon, WorkItemsIcon } from "@plane/propel/icons";
-import { Boxes, GitBranch, LayoutGrid, ListChecks } from "lucide-react";
+import { Boxes, GitBranch, LayoutGrid, ListChecks, ShieldAlert } from "lucide-react";
 import type { EUserProjectRoles } from "@plane/types";
 // plane ui
 // components
@@ -141,6 +141,16 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
         access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
         shouldRender: true,
         sortOrder: 3.3,
+      },
+      {
+        i18n_key: "sidebar.risks",
+        key: "risks",
+        name: "風險",
+        href: `/${workspaceSlug}/projects/${projectId}/risks`,
+        icon: ShieldAlert,
+        access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
+        shouldRender: true,
+        sortOrder: 3.4,
       },
       {
         i18n_key: "sidebar.views",

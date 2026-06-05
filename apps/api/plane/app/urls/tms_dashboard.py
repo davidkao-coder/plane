@@ -4,7 +4,13 @@
 
 from django.urls import path
 
-from plane.app.views import TMSDashboardEndpoint, MyQueueEndpoint, CapacityEndpoint
+from plane.app.views import (
+    TMSDashboardEndpoint,
+    MyQueueEndpoint,
+    CapacityEndpoint,
+    WeeklyReportEndpoint,
+    MyHoursEndpoint,
+)
 
 
 urlpatterns = [
@@ -22,5 +28,15 @@ urlpatterns = [
         "workspaces/<str:slug>/capacity/",
         CapacityEndpoint.as_view(),
         name="tms-capacity",
+    ),
+    path(
+        "workspaces/<str:slug>/my-hours/",
+        MyHoursEndpoint.as_view(),
+        name="tms-my-hours",
+    ),
+    path(
+        "workspaces/<str:slug>/projects/<uuid:project_id>/weekly-report/",
+        WeeklyReportEndpoint.as_view(),
+        name="tms-weekly-report",
     ),
 ]

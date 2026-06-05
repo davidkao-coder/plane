@@ -8,7 +8,7 @@ import { useMemo, useCallback } from "react";
 // plane imports
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { CycleIcon, IntakeIcon, ModuleIcon, PageIcon, ViewsIcon, WorkItemsIcon } from "@plane/propel/icons";
-import { Boxes, GitBranch, LayoutGrid, ListChecks } from "lucide-react";
+import { Boxes, GitBranch, LayoutGrid, ListChecks, ShieldAlert } from "lucide-react";
 import type { EUserProjectRoles, IPartialProject } from "@plane/types";
 import type { TNavigationItem } from "@/components/navigation/tab-navigation-root";
 
@@ -103,6 +103,16 @@ export const useNavigationItems = ({
         access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
         shouldRender: true,
         sortOrder: 3.3,
+      },
+      {
+        i18n_key: "sidebar.risks",
+        key: "risks",
+        name: "風險",
+        href: `/${workspaceSlug}/projects/${projectId}/risks`,
+        icon: ShieldAlert,
+        access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
+        shouldRender: true,
+        sortOrder: 3.4,
       },
       {
         i18n_key: "sidebar.views",

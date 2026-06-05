@@ -25,6 +25,7 @@ export default {
     stages: "階段",
     requirements: "需求",
     features: "功能",
+    risks: "風險",
     intake: "接收",
     drafts: "草稿",
     favorites: "收藏",

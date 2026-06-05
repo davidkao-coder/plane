@@ -182,7 +182,14 @@ from .project_template import (
     ApplyProjectTemplateEndpoint,
 )
 from .work_log import WorkLogViewSet
-from .tms_dashboard import TMSDashboardEndpoint, MyQueueEndpoint, CapacityEndpoint
+from .tms_dashboard import (
+    TMSDashboardEndpoint,
+    MyQueueEndpoint,
+    CapacityEndpoint,
+    WeeklyReportEndpoint,
+    MyHoursEndpoint,
+)
+from .risk import RiskViewSet
 
 from .api import ApiTokenEndpoint
 

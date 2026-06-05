@@ -25,6 +25,7 @@ import {
   Rows3,
   LayoutGrid,
   Table2,
+  GanttChartSquare,
 } from "lucide-react";
 import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
@@ -35,6 +36,7 @@ import { cn } from "@plane/utils";
 import { PageHead } from "@/components/core/page-title";
 // services
 import { FeatureService, type TFeatureIssue } from "@/services/feature.service";
+import { GanttView } from "@/components/tms/gantt-view";
 import { IssueService } from "@/services/issue/issue.service";
 import { ModuleService } from "@/services/module.service";
 import { RequirementService } from "@/services/requirement.service";
@@ -91,10 +93,10 @@ function WorkboardPage({ params }: Route.ComponentProps) {
   const [addTarget, setAddTarget] = useState<TAddTarget | null>(null);
   const [editTarget, setEditTarget] = useState<TEditTarget | null>(null);
 
-  // View mode (A = stacked / B = tree+list / C = spreadsheet) — persisted to localStorage
-  const [viewMode, setViewMode] = useState<"A" | "B" | "C">(() => {
+  // View mode (A = stacked / B = tree+list / C = spreadsheet / D = gantt) — persisted to localStorage
+  const [viewMode, setViewMode] = useState<"A" | "B" | "C" | "D">(() => {
     if (typeof window === "undefined") return "B";
-    return ((localStorage.getItem("workboard:viewMode") as "A" | "B" | "C") ?? "B");
+    return ((localStorage.getItem("workboard:viewMode") as "A" | "B" | "C" | "D") ?? "B");
   });
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("workboard:viewMode", viewMode);
@@ -144,10 +146,10 @@ function WorkboardPage({ params }: Route.ComponentProps) {
     }
   };
 
-  // When switching to layout A or C, eagerly load ALL issues so the
-  // flattened views can show data; B is lazy by selected node.
+  // When switching to a flattened layout (A / C / D) eagerly load ALL issues;
+  // B is lazy by selected node.
   useEffect(() => {
-    if ((viewMode === "A" || viewMode === "C") && selected.kind !== "all") {
+    if ((viewMode === "A" || viewMode === "C" || viewMode === "D") && selected.kind !== "all") {
       setSelected({ kind: "all" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -373,6 +375,7 @@ function WorkboardPage({ params }: Route.ComponentProps) {
           { id: "A", label: "堆疊", icon: Rows3 },
           { id: "B", label: "樹狀", icon: LayoutGrid },
           { id: "C", label: "試算表", icon: Table2 },
+          { id: "D", label: "甘特", icon: GanttChartSquare },
         ] as const
       ).map((v) => (
         <button
@@ -703,6 +706,16 @@ function WorkboardPage({ params }: Route.ComponentProps) {
           onDeleteIssue={handleDeleteIssue}
           loading={loading || issuesLoading}
         />
+      )}
+
+      {viewMode === "D" && (
+        <div className="overflow-auto">
+          {loading || issuesLoading ? (
+            <div className="flex items-center justify-center h-72 text-tertiary text-13">載入中…</div>
+          ) : (
+            <GanttView issues={filteredIssues} />
+          )}
+        </div>
       )}
 
       {viewMode === "C" && (

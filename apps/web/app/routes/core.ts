@@ -242,6 +242,14 @@ export const coreRoutes: RouteConfigEntry[] = [
             ),
           ]),
 
+          // Risks List – TMS Phase 2 / B4
+          layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/risks/(list)/layout.tsx", [
+            route(
+              ":workspaceSlug/projects/:projectId/risks",
+              "./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/risks/(list)/page.tsx"
+            ),
+          ]),
+
           // View Detail
           layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/views/(detail)/layout.tsx", [
             route(

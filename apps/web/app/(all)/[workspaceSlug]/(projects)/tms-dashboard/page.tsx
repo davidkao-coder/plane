@@ -10,13 +10,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
 import { Link } from "react-router";
-import { AlertTriangle, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronRight, FileText } from "lucide-react";
+import { Button } from "@plane/propel/button";
 import { cn } from "@plane/utils";
 // components
 import { PageHead } from "@/components/core/page-title";
 import { HealthBadge, CompletionBar } from "@/components/tms/health-badge";
 // services
-import { TMSDashboardService, type TDashboardProject } from "@/services/tms-dashboard.service";
+import {
+  TMSDashboardService,
+  type TDashboardProject,
+  type TReportIssue,
+} from "@/services/tms-dashboard.service";
 import type { Route } from "./+types/page";
 
 const service = new TMSDashboardService();
@@ -29,6 +34,7 @@ function TMSDashboardPage({ params }: Route.ComponentProps) {
   const [err, setErr] = useState("");
   const [projects, setProjects] = useState<TDashboardProject[]>([]);
   const [filter, setFilter] = useState<"all" | "attention">("all");
+  const [reportProject, setReportProject] = useState<TDashboardProject | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -150,17 +156,123 @@ function TMSDashboardPage({ params }: Route.ComponentProps) {
                 ))}
               </div>
 
-              <Link
-                to={`/${slug}/projects/${p.id}/workboard`}
-                className="mt-3 inline-flex items-center gap-0.5 text-11 text-blue-600 hover:underline"
-              >
-                進入整合檢視 <ChevronRight className="size-3" />
-              </Link>
+              <div className="mt-3 flex items-center gap-3">
+                <Link
+                  to={`/${slug}/projects/${p.id}/workboard`}
+                  className="inline-flex items-center gap-0.5 text-11 text-blue-600 hover:underline"
+                >
+                  進入整合檢視 <ChevronRight className="size-3" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setReportProject(p)}
+                  className="inline-flex items-center gap-0.5 text-11 text-tertiary hover:text-primary hover:underline"
+                >
+                  <FileText className="size-3" /> 本週週報
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </div>
+
+      {reportProject && (
+        <WeeklyReportModal slug={slug} project={reportProject} onClose={() => setReportProject(null)} />
+      )}
     </>
+  );
+}
+
+// ─── Weekly report modal ──────────────────────────────────────────────────────
+
+function WeeklyReportModal({
+  slug,
+  project,
+  onClose,
+}: {
+  slug: string;
+  project: TDashboardProject;
+  onClose: () => void;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [report, setReport] = useState<Awaited<ReturnType<TMSDashboardService["getWeeklyReport"]>> | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    service
+      .getWeeklyReport(slug, project.id)
+      .then((r) => setReport(r))
+      .catch(() => setReport(null))
+      .finally(() => setLoading(false));
+  }, [slug, project.id]);
+
+  const section = (title: string, tone: string, data?: { count: number; issues: TReportIssue[] }) => (
+    <div>
+      <h4 className={cn("text-12 font-semibold mb-1", tone)}>
+        {title} · {data?.count ?? 0}
+      </h4>
+      {data && data.issues.length > 0 ? (
+        <ul className="flex flex-col gap-0.5">
+          {data.issues.slice(0, 30).map((i) => (
+            <li key={i.id} className="text-12 text-secondary flex items-center gap-2">
+              <span className="font-mono text-10 text-tertiary">#{i.sequence_id}</span>
+              <span className="truncate">{i.name}</span>
+              {i.target_date && <span className="text-10 text-tertiary ml-auto font-mono">{i.target_date}</span>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="text-11 text-tertiary">—</div>
+      )}
+    </div>
+  );
+
+  const copyText = () => {
+    if (!report) return;
+    const fmt = (label: string, d?: { issues: TReportIssue[] }) =>
+      `【${label}】\n${(d?.issues ?? []).map((i) => `- #${i.sequence_id} ${i.name}`).join("\n") || "（無）"}`;
+    const text = [
+      `${project.name} 週報（${report.week_start} ~ ${report.week_end}）`,
+      fmt("本週完成", report.completed_this_week),
+      fmt("進行中", report.in_progress),
+      fmt("逾期", report.overdue),
+      fmt("下週計畫", report.planned_next_week),
+    ].join("\n\n");
+    navigator.clipboard?.writeText(text);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="w-full max-w-2xl rounded-lg border border-subtle bg-surface-1 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-3 border-b border-subtle flex items-center justify-between">
+          <div>
+            <h3 className="text-14 font-semibold text-primary">{project.name} · 本週週報</h3>
+            {report && (
+              <p className="text-11 text-tertiary mt-0.5">
+                {report.week_start} ~ {report.week_end}
+              </p>
+            )}
+          </div>
+          <button type="button" onClick={copyText} className="text-11 text-blue-600 hover:underline" disabled={!report}>
+            複製為文字
+          </button>
+        </div>
+        <div className="px-5 py-4 max-h-[60vh] overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+          {loading && <div className="text-tertiary text-13 col-span-2 py-6 text-center">產生中…</div>}
+          {!loading && report && (
+            <>
+              {section("本週完成", "text-emerald-600", report.completed_this_week)}
+              {section("進行中", "text-blue-600", report.in_progress)}
+              {section("逾期", "text-rose-600", report.overdue)}
+              {section("下週計畫", "text-indigo-600", report.planned_next_week)}
+            </>
+          )}
+        </div>
+        <div className="px-5 py-3 border-t border-subtle flex justify-end">
+          <Button variant="primary" size="sm" onClick={onClose}>關閉</Button>
+        </div>
+      </div>
+    </div>
   );
 }
 

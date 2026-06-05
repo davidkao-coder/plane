@@ -171,6 +171,7 @@ class FeatureIssuesEndpoint(BaseAPIView):
                     "sequence_id": i.sequence_id,
                     "estimate_hours": float(i.estimate_hours) if i.estimate_hours is not None else None,
                     "actual_hours": float(i.actual_hours) if i.actual_hours is not None else None,
+                    "start_date": i.start_date.isoformat() if i.start_date else None,
                     "target_date": i.target_date.isoformat() if i.target_date else None,
                     "is_overdue": is_issue_overdue(
                         i.target_date, i.state.group if i.state else None, today

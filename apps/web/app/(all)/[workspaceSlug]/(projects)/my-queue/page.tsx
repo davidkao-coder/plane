@@ -15,10 +15,20 @@ import { cn } from "@plane/utils";
 // components
 import { PageHead } from "@/components/core/page-title";
 // services
-import { TMSDashboardService, type TMyQueue, type TQueueBucket } from "@/services/tms-dashboard.service";
+import {
+  TMSDashboardService,
+  type TMyQueue,
+  type TQueueBucket,
+} from "@/services/tms-dashboard.service";
 import type { Route } from "./+types/page";
 
 const service = new TMSDashboardService();
+
+type TMyHours = {
+  total_hours: number;
+  by_day: { date: string; hours: number }[];
+  by_project: { project_id: string; project_name: string; hours: number }[];
+};
 
 const BUCKET_META: Record<
   TQueueBucket["key"],
@@ -46,6 +56,7 @@ function MyQueuePage({ params }: Route.ComponentProps) {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [queue, setQueue] = useState<TMyQueue | null>(null);
+  const [hours, setHours] = useState<TMyHours | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -54,6 +65,11 @@ function MyQueuePage({ params }: Route.ComponentProps) {
       .then((q) => setQueue(q))
       .catch((e) => setErr((e as { detail?: string })?.detail ?? "載入失敗"))
       .finally(() => setLoading(false));
+    // personal hours (last ~3 weeks) — best effort, non-blocking
+    service
+      .getMyHours(slug)
+      .then((h) => setHours(h as TMyHours))
+      .catch(() => setHours(null));
   }, [slug]);
 
   return (
@@ -66,6 +82,25 @@ function MyQueuePage({ params }: Route.ComponentProps) {
             {queue ? <span className="ml-1 text-12 font-normal text-tertiary">· {queue.total} 項待辦</span> : null}
           </h2>
         </div>
+
+        {/* Personal hours summary (last ~3 weeks) */}
+        {hours && hours.total_hours > 0 && (
+          <div className="rounded-md border border-subtle bg-surface-1 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-13 font-semibold text-primary">我的工時（近 3 週）</h3>
+              <span className="text-13 text-primary font-mono">{hours.total_hours}h</span>
+            </div>
+            {hours.by_project.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-11 text-tertiary">
+                {hours.by_project.map((p) => (
+                  <span key={p.project_id}>
+                    {p.project_name} <span className="font-mono text-secondary">{p.hours}h</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {loading && <div className="text-tertiary text-13 py-10 text-center">載入中…</div>}
         {err && <div className="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700 text-13">{err}</div>}

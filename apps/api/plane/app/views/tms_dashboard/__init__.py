@@ -1,1 +1,7 @@
-from .base import TMSDashboardEndpoint, MyQueueEndpoint, CapacityEndpoint
+from .base import (
+    TMSDashboardEndpoint,
+    MyQueueEndpoint,
+    CapacityEndpoint,
+    WeeklyReportEndpoint,
+    MyHoursEndpoint,
+)

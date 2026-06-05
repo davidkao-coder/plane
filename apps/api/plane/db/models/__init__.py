@@ -57,6 +57,7 @@ from .project_template import (
 from .requirement import Requirement
 from .feature import Feature, RequirementFeature, FeatureDependency
 from .work_log import WorkLog
+from .risk import Risk
 from .notification import EmailNotificationLog, Notification, UserNotificationPreference
 from .page import Page, PageLabel, PageLog, ProjectPage, PageVersion
 from .project import (

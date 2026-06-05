@@ -67,10 +67,19 @@ export type TMyQueue = {
   total: number;
 };
 
+export type TReportIssue = {
+  id: string;
+  sequence_id: number;
+  name: string;
+  state_name: string | null;
+  stage_name: string | null;
+  target_date: string | null;
+};
+
 export type TCapacityMember = {
   user_id: string;
   display_name: string;
-  avatar_url: string | null;
+  avatar_url?: string | null;
   role: string;
   capacity: number;
   overdue: number;
@@ -111,6 +120,41 @@ export class TMSDashboardService extends APIService {
 
   async getCapacity(slug: string, weeks = 4): Promise<TCapacity> {
     return this.get(`/api/workspaces/${slug}/capacity/`, { params: { weeks } })
+      .then((r) => r?.data)
+      .catch((e) => {
+        throw e?.response?.data;
+      });
+  }
+
+  async getWeeklyReport(
+    slug: string,
+    projectId: string
+  ): Promise<{
+    week_start: string;
+    week_end: string;
+    completed_this_week: { count: number; issues: TReportIssue[] };
+    in_progress: { count: number; issues: TReportIssue[] };
+    overdue: { count: number; issues: TReportIssue[] };
+    planned_next_week: { count: number; issues: TReportIssue[] };
+  }> {
+    return this.get(`/api/workspaces/${slug}/projects/${projectId}/weekly-report/`)
+      .then((r) => r?.data)
+      .catch((e) => {
+        throw e?.response?.data;
+      });
+  }
+
+  async getMyHours(
+    slug: string,
+    opts: { user_id?: string; date_from?: string; date_to?: string } = {}
+  ): Promise<{
+    date_from: string;
+    date_to: string;
+    total_hours: number;
+    by_day: { date: string; hours: number }[];
+    by_project: { project_id: string; project_name: string; hours: number }[];
+  }> {
+    return this.get(`/api/workspaces/${slug}/my-hours/`, { params: opts })
       .then((r) => r?.data)
       .catch((e) => {
         throw e?.response?.data;

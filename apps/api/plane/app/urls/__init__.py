@@ -18,6 +18,7 @@ from .process_template import urlpatterns as process_template_urls
 from .project_template import urlpatterns as project_template_urls
 from .work_log import urlpatterns as work_log_urls
 from .tms_dashboard import urlpatterns as tms_dashboard_urls
+from .risk import urlpatterns as risk_urls
 from .notification import urlpatterns as notification_urls
 from .page import urlpatterns as page_urls
 from .project import urlpatterns as project_urls
@@ -46,6 +47,7 @@ urlpatterns = [
     *project_template_urls,
     *work_log_urls,
     *tms_dashboard_urls,
+    *risk_urls,
     *notification_urls,
     *page_urls,
     *project_urls,
