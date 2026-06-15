@@ -13,6 +13,7 @@ import { Link } from "react-router";
 import { AlertTriangle, CalendarClock, CalendarDays, Clock, Flag, Inbox } from "lucide-react";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { cn } from "@plane/utils";
+import { twMonthDay, twShortDate } from "@/components/tms/format-date";
 // components
 import { PageHead } from "@/components/core/page-title";
 // services
@@ -44,7 +45,7 @@ function bucketMeta(
   let label = key;
   if (week_start) {
     const d = new Date(week_start);
-    label = `${d.getMonth() + 1}/${d.getDate()} 那週`;
+    label = `${twMonthDay(d)} 那週`;
   }
   return { label, icon: CalendarDays, tone: "text-tertiary" };
 }
@@ -189,7 +190,7 @@ function MyQueuePage({ params }: Route.ComponentProps) {
                               i.is_overdue ? "text-rose-600" : "text-tertiary"
                             )}
                           >
-                            {i.target_date ?? "—"}
+                            {twShortDate(i.target_date)}
                           </td>
                           <td className="px-3 py-2 w-12 text-right font-mono text-tertiary">
                             {i.estimate_hours != null ? `${i.estimate_hours}h` : ""}

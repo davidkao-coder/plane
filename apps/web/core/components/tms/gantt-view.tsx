@@ -10,6 +10,7 @@
 import { useMemo } from "react";
 import { cn } from "@plane/utils";
 import type { TFeatureIssue } from "@/services/feature.service";
+import { twMonthDay, twShortDate } from "@/components/tms/format-date";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -123,7 +124,7 @@ export function GanttView({ issues }: { issues: TFeatureIssue[] }) {
                   )}
                   style={{ width: COL }}
                 >
-                  {w.getMonth() + 1}/{w.getDate()}
+                  {twMonthDay(w)}
                 </div>
               ))}
             </div>
@@ -165,7 +166,7 @@ export function GanttView({ issues }: { issues: TFeatureIssue[] }) {
                               : "bg-slate-400"
                       )}
                       style={{ left, width }}
-                      title={`${i.name}｜${i.start_date ?? "?"} ~ ${i.target_date ?? "?"}`}
+                      title={`${i.name}｜${twShortDate(i.start_date)} ~ ${twShortDate(i.target_date)}`}
                     >
                       {i.process_step_name ?? ""}
                     </div>

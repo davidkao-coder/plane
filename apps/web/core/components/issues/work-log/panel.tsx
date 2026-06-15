@@ -27,6 +27,7 @@ import type { IUser, IWorkLog, TWorkLogWritePayload } from "@plane/types";
 import { Input, TextArea } from "@plane/ui";
 // services
 import { WorkLogService } from "@/services/work-log.service";
+import { twShortDate } from "@/components/tms/format-date";
 
 const workLogService = new WorkLogService();
 
@@ -190,7 +191,7 @@ export const WorkLogPanel = observer(function WorkLogPanel({
   };
 
   const handleDelete = async (log: IWorkLog) => {
-    if (!confirm(`刪除 ${log.log_date} 的 ${log.hours}h 工時？`)) return;
+    if (!confirm(`刪除 ${twShortDate(log.log_date)} 的 ${log.hours}h 工時？`)) return;
     try {
       await workLogService.remove(workspaceSlug, projectId, issueId, log.id);
       setToast({ type: TOAST_TYPE.SUCCESS, title: "已刪除" });
@@ -243,7 +244,7 @@ export const WorkLogPanel = observer(function WorkLogPanel({
               <tbody>
                 {logs.map((l) => (
                   <tr key={l.id} className="border-t border-subtle">
-                    <td className="px-2 py-1.5 text-tertiary font-mono">{l.log_date}</td>
+                    <td className="px-2 py-1.5 text-tertiary">{twShortDate(l.log_date)}</td>
                     <td className="px-2 py-1.5 text-right font-mono">{Number(l.hours).toFixed(2)}</td>
                     <td className="px-2 py-1.5 text-primary truncate max-w-md">{l.note || "—"}</td>
                     <td className="px-2 py-1.5 text-right">

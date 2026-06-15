@@ -12,6 +12,7 @@ import { observer } from "mobx-react";
 import { cn } from "@plane/utils";
 // components
 import { PageHead } from "@/components/core/page-title";
+import { twMonthDay } from "@/components/tms/format-date";
 // services
 import { TMSDashboardService, type TCapacity } from "@/services/tms-dashboard.service";
 import type { Route } from "./+types/page";
@@ -26,9 +27,9 @@ function cellTone(hours: number, capacity: number): string {
 }
 
 function fmtWeek(iso: string): string {
-  // iso = Monday date; show M/D
+  // iso = Monday date; show "6月15日"
   const d = new Date(iso);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
+  return twMonthDay(d);
 }
 
 function CapacityPage({ params }: Route.ComponentProps) {

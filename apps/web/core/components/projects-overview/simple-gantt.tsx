@@ -23,6 +23,7 @@ import {
   type TOverviewNode,
   type TTimeScale,
 } from "@/helpers/projects-overview.helper";
+import { twMonthDay, twYearMonth, twDay } from "@/components/tms/format-date";
 // local
 import { ModuleFilterPopover, type TModuleOption } from "./module-filter-popover";
 
@@ -70,7 +71,8 @@ function buildTicks(start: Date, end: Date, scale: TTimeScale): Tick[] {
       const isMajor = d.getDay() === 1;
       ticks.push({
         date: new Date(d),
-        label: `${d.getMonth() + 1}/${d.getDate()}`,
+        // dense daily axis: show "6月15日" on Mondays, "15日" otherwise
+        label: isMajor ? twMonthDay(d) : twDay(d),
         isMajor,
       });
       d.setDate(d.getDate() + 1);
@@ -82,7 +84,7 @@ function buildTicks(start: Date, end: Date, scale: TTimeScale): Tick[] {
       const showLabel = day === 1 || day === 8 || day === 15 || day === 22;
       ticks.push({
         date: new Date(d),
-        label: showLabel ? `${d.getMonth() + 1}/${day}` : "",
+        label: showLabel ? twMonthDay(d) : "",
         isMajor,
       });
       d.setDate(d.getDate() + 1);
@@ -94,7 +96,7 @@ function buildTicks(start: Date, end: Date, scale: TTimeScale): Tick[] {
       const showLabel = day === 1;
       ticks.push({
         date: new Date(d),
-        label: showLabel ? `${d.getFullYear() % 100}/${d.getMonth() + 1}` : "",
+        label: showLabel ? twYearMonth(d) : "",
         isMajor,
       });
       d.setDate(d.getDate() + 1);

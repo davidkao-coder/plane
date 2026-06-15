@@ -16,6 +16,7 @@ import { cn } from "@plane/utils";
 // components
 import { PageHead } from "@/components/core/page-title";
 import { HealthBadge, CompletionBar } from "@/components/tms/health-badge";
+import { twShortDate } from "@/components/tms/format-date";
 // services
 import {
   TMSDashboardService,
@@ -230,7 +231,7 @@ function WeeklyReportModal({
             <li key={i.id} className="text-12 text-secondary flex items-center gap-2">
               <span className="font-mono text-10 text-tertiary">#{i.sequence_id}</span>
               <span className="truncate">{i.name}</span>
-              {i.target_date && <span className="text-10 text-tertiary ml-auto font-mono">{i.target_date}</span>}
+              {i.target_date && <span className="text-10 text-tertiary ml-auto">{twShortDate(i.target_date)}</span>}
             </li>
           ))}
         </ul>
@@ -245,7 +246,7 @@ function WeeklyReportModal({
     const fmt = (label: string, d?: { issues: TReportIssue[] }) =>
       `【${label}】\n${(d?.issues ?? []).map((i) => `- #${i.sequence_id} ${i.name}`).join("\n") || "（無）"}`;
     const text = [
-      `${project.name} 週報（${report.week_start} ~ ${report.week_end}）`,
+      `${project.name} 週報（${twShortDate(report.week_start)} ~ ${twShortDate(report.week_end)}）`,
       fmt("本週完成", report.completed_this_week),
       fmt("進行中", report.in_progress),
       fmt("逾期", report.overdue),
@@ -262,7 +263,7 @@ function WeeklyReportModal({
             <h3 className="text-14 font-semibold text-primary">{project.name} · 本週週報</h3>
             {report && (
               <p className="text-11 text-tertiary mt-0.5">
-                {report.week_start} ~ {report.week_end}
+                {twShortDate(report.week_start)} ~ {twShortDate(report.week_end)}
               </p>
             )}
           </div>

@@ -14,6 +14,7 @@ import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { Input, TextArea } from "@plane/ui";
 import { cn } from "@plane/utils";
 import { PageHead } from "@/components/core/page-title";
+import { twShortDate } from "@/components/tms/format-date";
 import { RiskService, type TRisk, type TRiskWritePayload, type TRiskStatus } from "@/services/risk.service";
 import type { Route } from "./+types/page";
 
@@ -133,7 +134,7 @@ function ProjectRisksPage({ params }: Route.ComponentProps) {
                         {STATUS_META[r.status]?.label ?? r.status}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-tertiary font-mono text-11">{r.due_date ?? "—"}</td>
+                    <td className="px-3 py-2 text-tertiary text-11">{twShortDate(r.due_date)}</td>
                     <td className="px-3 py-2 text-right">
                       <button className="inline-flex items-center justify-center size-7 rounded hover:bg-black/[0.05]" onClick={() => setEditing(r)}>
                         <Pencil className="size-3.5 text-tertiary" />

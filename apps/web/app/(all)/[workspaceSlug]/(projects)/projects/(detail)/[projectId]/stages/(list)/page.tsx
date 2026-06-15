@@ -21,6 +21,7 @@ import { cn } from "@plane/utils";
 // components
 import { PageHead } from "@/components/core/page-title";
 import { HealthBadge, CompletionBar } from "@/components/tms/health-badge";
+import { twShortDate } from "@/components/tms/format-date";
 // services
 import { StageService } from "@/services/stage.service";
 import type { Route } from "./+types/page";
@@ -131,8 +132,8 @@ function ProjectStagesPage({ params }: Route.ComponentProps) {
                     <td className="px-3 py-2 text-right">
                       {s.completed_issues ?? 0}/{s.total_issues ?? 0}
                     </td>
-                    <td className="px-3 py-2 text-tertiary">{s.start_date ?? "—"}</td>
-                    <td className="px-3 py-2 text-tertiary">{s.target_date ?? "—"}</td>
+                    <td className="px-3 py-2 text-tertiary">{twShortDate(s.start_date)}</td>
+                    <td className="px-3 py-2 text-tertiary">{twShortDate(s.target_date)}</td>
                     <td className="px-3 py-2 text-right">
                       <button
                         type="button"
