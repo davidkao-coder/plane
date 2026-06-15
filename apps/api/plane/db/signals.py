@@ -9,7 +9,7 @@
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 
-from plane.db.models import Issue
+from plane.db.models import Issue, Project, Workspace
 
 
 def _state_group(issue):
@@ -31,6 +31,33 @@ def _stash_old_state_group(sender, instance, **kwargs):
     except Exception:
         old = None
     instance._tms_old_state_group = old
+
+
+@receiver(post_save, sender=Workspace)
+def _seed_new_workspace(sender, instance, created, **kwargs):
+    """New workspace → seed standard process + project templates."""
+    if not created:
+        return
+    try:
+        from plane.utils.tms_seed import seed_workspace_templates
+
+        seed_workspace_templates(instance)
+    except Exception:
+        pass
+
+
+@receiver(post_save, sender=Project)
+def _seed_new_project(sender, instance, created, **kwargs):
+    """New project → seed 7 standard stages (fixed order) + 未分類 chain so
+    the TMS hierarchy and feature auto-spawn work out of the box."""
+    if not created:
+        return
+    try:
+        from plane.utils.tms_seed import seed_project_scaffold
+
+        seed_project_scaffold(instance)
+    except Exception:
+        pass
 
 
 @receiver(post_save, sender=Issue)

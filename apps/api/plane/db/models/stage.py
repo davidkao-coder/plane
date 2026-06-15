@@ -72,13 +72,19 @@ class Stage(ProjectBaseModel):
         ordering = ("sort_order", "-created_at")
 
     def save(self, *args, **kwargs):
-        # Auto-assign smallest sort_order on create (matches Module pattern)
-        if self._state.adding:
-            smallest_sort_order = Stage.objects.filter(project=self.project).aggregate(
-                smallest=models.Min("sort_order")
-            )["smallest"]
-            if smallest_sort_order is not None:
-                self.sort_order = smallest_sort_order - 10000
+        # TMS Phase 2: only auto-assign sort_order when the caller didn't set
+        # one explicitly (i.e. it's still the default 65535). This preserves
+        # the seeded standard-stage order (100..700) and the unsorted=9999
+        # slot, while manually-added stages append AFTER the standard ones
+        # (largest + 100) rather than jumping to the front and breaking the
+        # 需求分析→…→維護 ordering.
+        if self._state.adding and self.sort_order == 65535:
+            largest = (
+                Stage.objects.filter(project=self.project)
+                .exclude(key="unsorted")
+                .aggregate(largest=models.Max("sort_order"))["largest"]
+            )
+            self.sort_order = (largest or 0) + 100
         super().save(*args, **kwargs)
 
     def __str__(self):
