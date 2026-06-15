@@ -5,7 +5,14 @@
  */
 
 import { differenceInDays, format, formatDistanceToNow, isAfter, isEqual, isValid, parseISO } from "date-fns";
+import { zhTW } from "date-fns/locale";
 import { isNumber } from "lodash-es";
+
+// Traditional-Chinese (Taiwan) locale for all human-facing date formatting.
+// Injected into every display-format call so month/weekday names render in
+// Chinese regardless of the format token. Payload/parse helpers below
+// intentionally do NOT use it (they must stay yyyy-MM-dd / numeric).
+const TW_LOCALE = { locale: zhTW };
 
 // Format Date Helpers
 /**
@@ -18,7 +25,7 @@ import { isNumber } from "lodash-es";
  */
 export const renderFormattedDate = (
   date: string | Date | undefined | null,
-  formatToken: string = "MMM dd, yyyy"
+  formatToken: string = "yyyy'年'M'月'd'日'"
 ): string | undefined => {
   // Parse the date to check if it is valid
   const parsedDate = getDate(date);
@@ -28,11 +35,12 @@ export const renderFormattedDate = (
   if (!isValid(parsedDate)) return; // Return null for invalid dates
   let formattedDate;
   try {
-    // Format the date in the format provided or default format (MMM dd, yyyy)
-    formattedDate = format(parsedDate, formatToken);
+    // Format with the provided token; zh-TW locale makes any month/weekday
+    // tokens render in Chinese. Default token → "2026年6月15日".
+    formattedDate = format(parsedDate, formatToken, TW_LOCALE);
   } catch (_e) {
-    // Format the date in format (MMM dd, yyyy) in case of any error
-    formattedDate = format(parsedDate, "MMM dd, yyyy");
+    // Fallback Taiwan format on any error
+    formattedDate = format(parsedDate, "yyyy'年'M'月'd'日'", TW_LOCALE);
   }
   return formattedDate;
 };
@@ -50,8 +58,8 @@ export const renderFormattedDateWithoutYear = (date: string | Date): string => {
   if (!parsedDate) return "";
   // Check if the parsed date is valid before formatting
   if (!isValid(parsedDate)) return ""; // Return empty string for invalid dates
-  // Format the date in short format (MMM dd)
-  const formattedDate = format(parsedDate, "MMM dd");
+  // Format the date in short Taiwan format ("6月15日")
+  const formattedDate = format(parsedDate, "M'月'd'日'", TW_LOCALE);
   return formattedDate;
 };
 
@@ -500,39 +508,39 @@ export const formatDateRange = (
 
   // If only start date is provided
   if (parsedStartDate && !parsedEndDate) {
-    return format(parsedStartDate, "MMM dd, yyyy");
+    return format(parsedStartDate, "yyyy'年'M'月'd'日'", TW_LOCALE);
   }
 
   // If only end date is provided
   if (!parsedStartDate && parsedEndDate) {
-    return format(parsedEndDate, "MMM dd, yyyy");
+    return format(parsedEndDate, "yyyy'年'M'月'd'日'", TW_LOCALE);
   }
 
-  // If both dates are provided
+  // If both dates are provided (Taiwan format)
   if (parsedStartDate && parsedEndDate) {
     const startYear = parsedStartDate.getFullYear();
     const startMonth = parsedStartDate.getMonth();
     const endYear = parsedEndDate.getFullYear();
     const endMonth = parsedEndDate.getMonth();
 
-    // Same year, same month
+    // Same year, same month → "2025年1月24日 - 28日"
     if (startYear === endYear && startMonth === endMonth) {
-      const startDay = format(parsedStartDate, "dd");
-      const endDay = format(parsedEndDate, "dd");
-      return `${format(parsedStartDate, "MMM")} ${startDay} - ${endDay}, ${startYear}`;
+      const start = format(parsedStartDate, "yyyy'年'M'月'd'日'", TW_LOCALE);
+      const endDay = format(parsedEndDate, "d'日'", TW_LOCALE);
+      return `${start} - ${endDay}`;
     }
 
-    // Same year, different month
+    // Same year, different month → "2025年1月24日 - 2月6日"
     if (startYear === endYear) {
-      const startFormatted = format(parsedStartDate, "MMM dd");
-      const endFormatted = format(parsedEndDate, "MMM dd");
-      return `${startFormatted} - ${endFormatted}, ${startYear}`;
+      const start = format(parsedStartDate, "yyyy'年'M'月'd'日'", TW_LOCALE);
+      const end = format(parsedEndDate, "M'月'd'日'", TW_LOCALE);
+      return `${start} - ${end}`;
     }
 
-    // Different year
-    const startFormatted = format(parsedStartDate, "MMM dd, yyyy");
-    const endFormatted = format(parsedEndDate, "MMM dd, yyyy");
-    return `${startFormatted} - ${endFormatted}`;
+    // Different year → "2024年12月28日 - 2025年1月4日"
+    const start = format(parsedStartDate, "yyyy'年'M'月'd'日'", TW_LOCALE);
+    const end = format(parsedEndDate, "yyyy'年'M'月'd'日'", TW_LOCALE);
+    return `${start} - ${end}`;
   }
 
   return "";

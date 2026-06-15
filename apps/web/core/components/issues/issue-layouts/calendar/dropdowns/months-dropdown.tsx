@@ -51,26 +51,27 @@ export const CalendarMonthsDropdown = observer(function CalendarMonthsDropdown(p
   const getWeekLayoutHeader = (): string => {
     const allDaysOfActiveWeek = issueCalendarView.allDaysOfActiveWeek;
 
-    if (!allDaysOfActiveWeek) return "Week view";
+    if (!allDaysOfActiveWeek) return "週檢視";
 
     const daysList = Object.keys(allDaysOfActiveWeek);
 
     const firstDay = getDate(daysList[0]);
     const lastDay = getDate(daysList[daysList.length - 1]);
 
-    if (!firstDay || !lastDay) return "Week view";
+    if (!firstDay || !lastDay) return "週檢視";
 
+    // Taiwan order: 年份在前 → "2026年6月"
     if (firstDay.getMonth() === lastDay.getMonth() && firstDay.getFullYear() === lastDay.getFullYear())
-      return `${MONTHS_LIST[firstDay.getMonth() + 1].title} ${firstDay.getFullYear()}`;
+      return `${firstDay.getFullYear()}年${MONTHS_LIST[firstDay.getMonth() + 1].title}`;
 
     if (firstDay.getFullYear() !== lastDay.getFullYear()) {
-      return `${MONTHS_LIST[firstDay.getMonth() + 1].shortTitle} ${firstDay.getFullYear()} - ${
+      return `${firstDay.getFullYear()}年${MONTHS_LIST[firstDay.getMonth() + 1].shortTitle} - ${lastDay.getFullYear()}年${
         MONTHS_LIST[lastDay.getMonth() + 1].shortTitle
-      } ${lastDay.getFullYear()}`;
+      }`;
     } else
-      return `${MONTHS_LIST[firstDay.getMonth() + 1].shortTitle} - ${
+      return `${firstDay.getFullYear()}年${MONTHS_LIST[firstDay.getMonth() + 1].shortTitle} - ${
         MONTHS_LIST[lastDay.getMonth() + 1].shortTitle
-      } ${lastDay.getFullYear()}`;
+      }`;
   };
 
   const handleDateChange = (date: Date) => {
@@ -89,7 +90,7 @@ export const CalendarMonthsDropdown = observer(function CalendarMonthsDropdown(p
           disabled={calendarLayout === "week"}
         >
           {calendarLayout === "month"
-            ? `${MONTHS_LIST[activeMonthDate.getMonth() + 1].title} ${activeMonthDate.getFullYear()}`
+            ? `${activeMonthDate.getFullYear()}年${MONTHS_LIST[activeMonthDate.getMonth() + 1].title}`
             : getWeekLayoutHeader()}
         </button>
       </Popover.Button>

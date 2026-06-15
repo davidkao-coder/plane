@@ -63,30 +63,30 @@ export const PREFERENCE_OPTIONS: {
 export const START_OF_THE_WEEK_OPTIONS = [
   {
     value: EStartOfTheWeek.SUNDAY,
-    label: "Sunday",
+    label: "星期日",
   },
   {
     value: EStartOfTheWeek.MONDAY,
-    label: "Monday",
+    label: "星期一",
   },
   {
     value: EStartOfTheWeek.TUESDAY,
-    label: "Tuesday",
+    label: "星期二",
   },
   {
     value: EStartOfTheWeek.WEDNESDAY,
-    label: "Wednesday",
+    label: "星期三",
   },
   {
     value: EStartOfTheWeek.THURSDAY,
-    label: "Thursday",
+    label: "星期四",
   },
   {
     value: EStartOfTheWeek.FRIDAY,
-    label: "Friday",
+    label: "星期五",
   },
   {
     value: EStartOfTheWeek.SATURDAY,
-    label: "Saturday",
+    label: "星期六",
   },
 ];

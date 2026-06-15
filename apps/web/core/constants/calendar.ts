@@ -13,54 +13,18 @@ export const MONTHS_LIST: {
     title: string;
   };
 } = {
-  1: {
-    shortTitle: "Jan",
-    title: "January",
-  },
-  2: {
-    shortTitle: "Feb",
-    title: "February",
-  },
-  3: {
-    shortTitle: "Mar",
-    title: "March",
-  },
-  4: {
-    shortTitle: "Apr",
-    title: "April",
-  },
-  5: {
-    shortTitle: "May",
-    title: "May",
-  },
-  6: {
-    shortTitle: "Jun",
-    title: "June",
-  },
-  7: {
-    shortTitle: "Jul",
-    title: "July",
-  },
-  8: {
-    shortTitle: "Aug",
-    title: "August",
-  },
-  9: {
-    shortTitle: "Sep",
-    title: "September",
-  },
-  10: {
-    shortTitle: "Oct",
-    title: "October",
-  },
-  11: {
-    shortTitle: "Nov",
-    title: "November",
-  },
-  12: {
-    shortTitle: "Dec",
-    title: "December",
-  },
+  1: { shortTitle: "1月", title: "1月" },
+  2: { shortTitle: "2月", title: "2月" },
+  3: { shortTitle: "3月", title: "3月" },
+  4: { shortTitle: "4月", title: "4月" },
+  5: { shortTitle: "5月", title: "5月" },
+  6: { shortTitle: "6月", title: "6月" },
+  7: { shortTitle: "7月", title: "7月" },
+  8: { shortTitle: "8月", title: "8月" },
+  9: { shortTitle: "9月", title: "9月" },
+  10: { shortTitle: "10月", title: "10月" },
+  11: { shortTitle: "11月", title: "11月" },
+  12: { shortTitle: "12月", title: "12月" },
 };
 
 export const DAYS_LIST: {
@@ -71,38 +35,38 @@ export const DAYS_LIST: {
   };
 } = {
   1: {
-    shortTitle: "Sun",
-    title: "Sunday",
+    shortTitle: "週日",
+    title: "星期日",
     value: EStartOfTheWeek.SUNDAY,
   },
   2: {
-    shortTitle: "Mon",
-    title: "Monday",
+    shortTitle: "週一",
+    title: "星期一",
     value: EStartOfTheWeek.MONDAY,
   },
   3: {
-    shortTitle: "Tue",
-    title: "Tuesday",
+    shortTitle: "週二",
+    title: "星期二",
     value: EStartOfTheWeek.TUESDAY,
   },
   4: {
-    shortTitle: "Wed",
-    title: "Wednesday",
+    shortTitle: "週三",
+    title: "星期三",
     value: EStartOfTheWeek.WEDNESDAY,
   },
   5: {
-    shortTitle: "Thu",
-    title: "Thursday",
+    shortTitle: "週四",
+    title: "星期四",
     value: EStartOfTheWeek.THURSDAY,
   },
   6: {
-    shortTitle: "Fri",
-    title: "Friday",
+    shortTitle: "週五",
+    title: "星期五",
     value: EStartOfTheWeek.FRIDAY,
   },
   7: {
-    shortTitle: "Sat",
-    title: "Saturday",
+    shortTitle: "週六",
+    title: "星期六",
     value: EStartOfTheWeek.SATURDAY,
   },
 };
@@ -115,10 +79,10 @@ export const CALENDAR_LAYOUTS: {
 } = {
   month: {
     key: "month",
-    title: "Month layout",
+    title: "月檢視",
   },
   week: {
     key: "week",
-    title: "Week layout",
+    title: "週檢視",
   },
 };

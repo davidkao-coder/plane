@@ -206,9 +206,9 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
             {/* mobile view */}
             <div className="md:hidden">
               <p className="p-4 text-18 font-semibold">
-                {`${selectedDate.getDate()} ${
+                {`${selectedDate.getFullYear()}年${
                   MONTHS_LIST[selectedDate.getMonth() + 1].title
-                }, ${selectedDate.getFullYear()}`}
+                }${selectedDate.getDate()}日`}
               </p>
               <CalendarIssueBlocks
                 date={selectedDate}
@@ -234,9 +234,9 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
         {/* mobile view */}
         <div className="md:hidden">
           <p className="p-4 text-18 font-semibold">
-            {`${selectedDate.getDate()} ${
+            {`${selectedDate.getFullYear()}年${
               MONTHS_LIST[selectedDate.getMonth() + 1].title
-            }, ${selectedDate.getFullYear()}`}
+            }${selectedDate.getDate()}日`}
           </p>
           <CalendarIssueBlocks
             date={selectedDate}
