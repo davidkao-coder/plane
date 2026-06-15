@@ -20,7 +20,7 @@ from plane.utils.tms_health import (
     completion_ratio,
     rollup_project_health,
 )
-from plane.utils.tms_schedule import bucket_by_week, week_offset, week_start, BUCKET_ORDER
+from plane.utils.tms_schedule import weekly_bucket_key, week_offset, week_start
 
 from .. import BaseAPIView
 
@@ -156,15 +156,19 @@ class TMSDashboardEndpoint(BaseAPIView):
 class MyQueueEndpoint(BaseAPIView):
     """Personal task queue for developers / leads.
 
-    GET /workspaces/<slug>/my-queue/[?user_id=<uuid>]
+    GET /workspaces/<slug>/my-queue/[?user_id=<uuid>][&weeks=<n>]
     Returns the current user's (or, for managers, a chosen user's) open
-    assigned issues bucketed by overdue / this_week / next_week / later /
-    no_date.
+    assigned issues bucketed by overdue / this_week / next_week / each of the
+    next `weeks` weeks individually / later / no_date.
     """
 
     @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST], level="WORKSPACE")
     def get(self, request, slug):
         today = timezone.now().date()
+        try:
+            horizon = max(2, min(8, int(request.query_params.get("weeks", 4))))
+        except (TypeError, ValueError):
+            horizon = 4
 
         # Default to self; managers/admins may inspect another user's queue.
         target_user_id = request.query_params.get("user_id") or request.user.id
@@ -196,13 +200,19 @@ class MyQueueEndpoint(BaseAPIView):
             .order_by("target_date")
         )
 
-        buckets: dict = {b: [] for b in BUCKET_ORDER}
+        # Dynamic bucket order: overdue, week_0..week_{horizon-1}, later, no_date
+        order = (
+            ["overdue"]
+            + [f"week_{i}" for i in range(horizon)]
+            + ["later", "no_date"]
+        )
+        buckets: dict = {k: [] for k in order}
         for i in issues:
             feat = i.feature
             req = feat.requirement if feat else None
             mod = req.module if req else None
-            b = bucket_by_week(i.target_date, today)
-            buckets[b].append(
+            key = weekly_bucket_key(i.target_date, today, horizon)
+            buckets[key].append(
                 {
                     "id": str(i.id),
                     "name": i.name,
@@ -225,10 +235,22 @@ class MyQueueEndpoint(BaseAPIView):
                 }
             )
 
+        this_monday = week_start(today)
+        week_starts = {
+            f"week_{i}": (this_monday + timedelta(days=7 * i)).isoformat()
+            for i in range(horizon)
+        }
+
         result = {
+            "horizon": horizon,
             "buckets": [
-                {"key": b, "issues": buckets[b], "count": len(buckets[b])}
-                for b in BUCKET_ORDER
+                {
+                    "key": k,
+                    "week_start": week_starts.get(k),
+                    "issues": buckets[k],
+                    "count": len(buckets[k]),
+                }
+                for k in order
             ],
             "total": sum(len(v) for v in buckets.values()),
         }

@@ -143,16 +143,22 @@ function TMSDashboardPage({ params }: Route.ComponentProps) {
                 </div>
               </div>
 
-              {/* Stage mini-bars */}
+              {/* Stage mini-bars — each links into the project's workboard
+                  pre-filtered to that stage (coarse→fine drill-down). */}
               <div className="mt-3 flex flex-col gap-1">
                 {p.stages.map((s) => (
-                  <div key={s.id} className="flex items-center gap-2 text-11">
+                  <Link
+                    key={s.id}
+                    to={`/${slug}/projects/${p.id}/workboard?stage=${s.id}`}
+                    className="flex items-center gap-2 text-11 rounded px-1 -mx-1 hover:bg-surface-2"
+                    title={`進入「${s.name}」階段`}
+                  >
                     <span className="w-20 truncate text-tertiary">{s.name}</span>
                     <div className="flex-1">
                       <CompletionBar ratio={s.completion_ratio} />
                     </div>
                     <HealthBadge health={s.health} className="w-14 justify-center" />
-                  </div>
+                  </Link>
                 ))}
               </div>
 

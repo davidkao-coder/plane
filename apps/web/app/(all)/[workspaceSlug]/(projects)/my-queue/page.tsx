@@ -31,16 +31,23 @@ type TMyHours = {
   by_project: { project_id: string; project_name: string; hours: number }[];
 };
 
-const BUCKET_META: Record<
-  TQueueBucket["key"],
-  { label: string; icon: React.ElementType; tone: string }
-> = {
-  overdue: { label: "已逾期", icon: AlertTriangle, tone: "text-rose-600" },
-  this_week: { label: "本週", icon: CalendarClock, tone: "text-blue-600" },
-  next_week: { label: "下週", icon: CalendarDays, tone: "text-indigo-600" },
-  later: { label: "之後", icon: Clock, tone: "text-tertiary" },
-  no_date: { label: "未排程", icon: Inbox, tone: "text-tertiary" },
-};
+function bucketMeta(
+  bucket: TQueueBucket
+): { label: string; icon: React.ElementType; tone: string } {
+  const { key, week_start } = bucket;
+  if (key === "overdue") return { label: "已逾期", icon: AlertTriangle, tone: "text-rose-600" };
+  if (key === "later") return { label: "更久以後", icon: Clock, tone: "text-tertiary" };
+  if (key === "no_date") return { label: "未排程", icon: Inbox, tone: "text-tertiary" };
+  if (key === "week_0") return { label: "本週", icon: CalendarClock, tone: "text-blue-600" };
+  if (key === "week_1") return { label: "下週", icon: CalendarDays, tone: "text-indigo-600" };
+  // week_2 .. week_n — label by the Monday date of that week
+  let label = key;
+  if (week_start) {
+    const d = new Date(week_start);
+    label = `${d.getMonth() + 1}/${d.getDate()} 那週`;
+  }
+  return { label, icon: CalendarDays, tone: "text-tertiary" };
+}
 
 const PRIORITY_LABEL: Record<string, string> = {
   urgent: "緊急",
@@ -139,7 +146,7 @@ function MyQueuePage({ params }: Route.ComponentProps) {
           queue.buckets
             .filter((b) => b.count > 0)
             .map((bucket) => {
-              const meta = BUCKET_META[bucket.key];
+              const meta = bucketMeta(bucket);
               const Icon = meta.icon;
               return (
                 <div key={bucket.key} className="rounded-md border border-subtle bg-surface-1 overflow-hidden">

@@ -57,12 +57,16 @@ export type TQueueIssue = {
 };
 
 export type TQueueBucket = {
-  key: "overdue" | "this_week" | "next_week" | "later" | "no_date";
+  /** "overdue" | "week_0" | "week_1" | ... | "later" | "no_date" */
+  key: string;
+  /** Monday ISO date for week_<n> buckets; null otherwise */
+  week_start?: string | null;
   issues: TQueueIssue[];
   count: number;
 };
 
 export type TMyQueue = {
+  horizon: number;
   buckets: TQueueBucket[];
   total: number;
 };
@@ -108,10 +112,11 @@ export class TMSDashboardService extends APIService {
       });
   }
 
-  async getMyQueue(slug: string, userId?: string): Promise<TMyQueue> {
-    return this.get(`/api/workspaces/${slug}/my-queue/`, {
-      params: userId ? { user_id: userId } : {},
-    })
+  async getMyQueue(slug: string, opts: { userId?: string; weeks?: number } = {}): Promise<TMyQueue> {
+    const params: Record<string, string | number> = {};
+    if (opts.userId) params.user_id = opts.userId;
+    if (opts.weeks) params.weeks = opts.weeks;
+    return this.get(`/api/workspaces/${slug}/my-queue/`, { params })
       .then((r) => r?.data)
       .catch((e) => {
         throw e?.response?.data;

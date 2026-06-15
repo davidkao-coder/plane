@@ -11,7 +11,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { observer } from "mobx-react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import {
   ChevronDown,
   ChevronRight,
@@ -88,7 +88,12 @@ function WorkboardPage({ params }: Route.ComponentProps) {
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<TNodeSel>({ kind: "all" });
-  const [stageFilter, setStageFilter] = useState<string | null>(null);
+  // Deep-link: /workboard?stage=<id> pre-selects the stage filter (used when
+  // a PM clicks a stage from the cross-project dashboard).
+  const [searchParams] = useSearchParams();
+  const [stageFilter, setStageFilter] = useState<string | null>(
+    () => searchParams.get("stage") || null
+  );
 
   const [addTarget, setAddTarget] = useState<TAddTarget | null>(null);
   const [editTarget, setEditTarget] = useState<TEditTarget | null>(null);
@@ -262,31 +267,40 @@ function WorkboardPage({ params }: Route.ComponentProps) {
     return m;
   }, [features]);
 
-  // Issue count aggregations for tree counters (computed from currently loaded issues)
-  const issuesByFeature = useMemo(() => {
-    const m = new Map<string, number>();
+  // Issue progress aggregations for tree counters (total + done) per level,
+  // computed from currently loaded issues. "done" = completed/cancelled group.
+  const aggBy = (keyOf: (i: TFeatureIssue) => string | null) => {
+    const m = new Map<string, { total: number; done: number }>();
     for (const i of issues) {
-      if (!i.feature_id) continue;
-      m.set(i.feature_id, (m.get(i.feature_id) ?? 0) + 1);
+      const k = keyOf(i);
+      if (!k) continue;
+      const cur = m.get(k) ?? { total: 0, done: 0 };
+      cur.total += 1;
+      if (i.state_group === "completed" || i.state_group === "cancelled") cur.done += 1;
+      m.set(k, cur);
     }
     return m;
-  }, [issues]);
-  const issuesByRequirement = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const i of issues) {
-      if (!i.requirement_id) continue;
-      m.set(i.requirement_id, (m.get(i.requirement_id) ?? 0) + 1);
-    }
-    return m;
-  }, [issues]);
-  const issuesByModule = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const i of issues) {
-      if (!i.module_id) continue;
-      m.set(i.module_id, (m.get(i.module_id) ?? 0) + 1);
-    }
-    return m;
-  }, [issues]);
+  };
+  const issuesByFeature = useMemo(() => aggBy((i) => i.feature_id), [issues]);
+  const issuesByRequirement = useMemo(() => aggBy((i) => i.requirement_id), [issues]);
+  const issuesByModule = useMemo(() => aggBy((i) => i.module_id), [issues]);
+
+  // Small inline progress label "done/total" with tone
+  const progressLabel = (agg?: { total: number; done: number }) => {
+    if (!agg || agg.total === 0) return null;
+    const pct = Math.round((agg.done / agg.total) * 100);
+    return (
+      <span
+        className={cn(
+          "text-10 tabular-nums",
+          pct === 100 ? "text-emerald-600" : pct > 0 ? "text-blue-600" : "text-tertiary"
+        )}
+        title={`${agg.done}/${agg.total} 完成 (${pct}%)`}
+      >
+        {agg.done}/{agg.total}
+      </span>
+    );
+  };
 
   // ─── delete helpers ────────────────────────────────────────────────────
   const handleDeleteModule = async (m: IModule) => {
@@ -471,9 +485,9 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                       >
                         {m.name}
                       </button>
-                      <span className="text-10 text-tertiary" title="需求數 / 工項數">
-                        {moduleReqs.length}
-                        {issuesByModule.get(m.id) ? ` · ${issuesByModule.get(m.id)}🎫` : ""}
+                      <span className="text-10 text-tertiary flex items-center gap-1" title="需求數 · 完成/工項數">
+                        <span>{moduleReqs.length}需</span>
+                        {progressLabel(issuesByModule.get(m.id))}
                       </span>
                       <span className="invisible group-hover:visible flex items-center gap-0.5 ml-1">
                         <NodeActionBtn icon={Plus} title="加需求" onClick={() => setAddTarget({ kind: "requirement", moduleId: m.id })} />
@@ -534,9 +548,9 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                                 <span className="font-mono text-10 text-tertiary mr-1">{r.requirement_id}</span>
                                 {r.description.slice(0, 30)}
                               </button>
-                              <span className="text-10 text-tertiary" title="功能數 / 工項數">
-                                {reqFeatures.length}
-                                {issuesByRequirement.get(r.id) ? ` · ${issuesByRequirement.get(r.id)}🎫` : ""}
+                              <span className="text-10 text-tertiary flex items-center gap-1" title="功能數 · 完成/工項數">
+                                <span>{reqFeatures.length}功</span>
+                                {progressLabel(issuesByRequirement.get(r.id))}
                               </span>
                               <span className="invisible group-hover:visible flex items-center gap-0.5 ml-1">
                                 <NodeActionBtn icon={Plus} title="加功能" onClick={() => setAddTarget({ kind: "feature", requirementId: r.id })} />
@@ -587,8 +601,8 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                                     <span className="font-mono text-10 text-tertiary mr-1">{f.feature_id}</span>
                                     {f.name}
                                   </button>
-                                  <span className="text-10 text-tertiary" title="工項數">
-                                    {issuesByFeature.get(f.id) ? `${issuesByFeature.get(f.id)}🎫` : ""}
+                                  <span className="text-10 text-tertiary" title="完成/工項數">
+                                    {progressLabel(issuesByFeature.get(f.id))}
                                   </span>
                                   <span className="invisible group-hover:visible flex items-center gap-0.5 ml-1">
                                     <NodeActionBtn icon={Plus} title="加工項" onClick={() => setAddTarget({ kind: "issue", featureId: f.id })} />
@@ -609,8 +623,37 @@ function WorkboardPage({ params }: Route.ComponentProps) {
         {/* ── Right ─────────────────────────────────────────────────────── */}
         <main className="flex-1 overflow-y-auto">
           <div className="border-b border-subtle px-4 py-2 bg-surface-1 sticky top-0 z-10">
-            <h3 className="text-13 font-semibold text-primary">
+            <h3 className="text-13 font-semibold text-primary flex items-center gap-2 flex-wrap">
+              {/* breadcrumb of current drill position */}
+              <span className="text-11 font-normal text-tertiary">
+                {(() => {
+                  if (selected.kind === "all") return "全部";
+                  if (selected.kind === "module")
+                    return modules.find((m) => m.id === selected.id)?.name ?? "分類";
+                  if (selected.kind === "requirement") {
+                    const r = requirements.find((x) => x.id === selected.id);
+                    return r ? `${r.requirement_id} ${r.description.slice(0, 20)}` : "需求";
+                  }
+                  const f = features.find((x) => x.id === selected.id);
+                  return f ? `${f.feature_id} ${f.name}` : "功能";
+                })()}
+                {stageFilter ? ` · ${stages.find((s) => s.id === stageFilter)?.name ?? "階段"}` : ""}
+              </span>
+              <span className="text-tertiary">›</span>
               工作項目 <span className="text-11 text-tertiary font-normal">· {filteredIssues.length}</span>
+              {(() => {
+                const done = filteredIssues.filter(
+                  (i) => i.state_group === "completed" || i.state_group === "cancelled"
+                ).length;
+                const overdue = filteredIssues.filter((i) => i.is_overdue).length;
+                if (filteredIssues.length === 0) return null;
+                return (
+                  <span className="text-11 font-normal text-tertiary">
+                    （{done}/{filteredIssues.length} 完成
+                    {overdue > 0 ? <span className="text-rose-600"> · {overdue} 逾期</span> : null}）
+                  </span>
+                );
+              })()}
             </h3>
           </div>
 

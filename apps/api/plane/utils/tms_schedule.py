@@ -47,6 +47,31 @@ def week_offset(target_date: Optional[date], today: date) -> Optional[int]:
     return delta_days // 7
 
 
+def weekly_bucket_key(target_date: Optional[date], today: date, horizon: int) -> str:
+    """Bucket key for the engineer queue with per-week breakdown.
+
+    Returns:
+      * "no_date"   – no target date
+      * "overdue"   – before this week
+      * "week_<n>"  – n weeks ahead, for 0 <= n < horizon (0 = this week)
+      * "later"     – beyond the horizon
+
+    Unlike bucket_by_week (which collapses everything past next week into
+    "later"), this gives a distinct bucket for each of the next `horizon`
+    weeks so engineers can see week 3, week 4, ... separately.
+    """
+    if target_date is None:
+        return "no_date"
+    off = week_offset(target_date, today)
+    if off is None:
+        return "no_date"
+    if off < 0:
+        return "overdue"
+    if off < horizon:
+        return f"week_{off}"
+    return "later"
+
+
 def bucket_by_week(target_date: Optional[date], today: date) -> str:
     """Bucket a target date relative to today's week.
 

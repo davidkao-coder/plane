@@ -12,6 +12,7 @@ from plane.utils.tms_schedule import (
     week_start,
     week_offset,
     bucket_by_week,
+    weekly_bucket_key,
     BUCKET_OVERDUE,
     BUCKET_THIS_WEEK,
     BUCKET_NEXT_WEEK,
@@ -83,3 +84,32 @@ class TestWeekOffset:
 
     def test_last_week_is_negative_one(self):
         assert week_offset(date(2026, 5, 28), FRIDAY) == -1
+
+
+@pytest.mark.unit
+class TestWeeklyBucketKey:
+    def test_no_date(self):
+        assert weekly_bucket_key(None, FRIDAY, 4) == "no_date"
+
+    def test_overdue(self):
+        # 2026-05-28 is in last week -> overdue
+        assert weekly_bucket_key(date(2026, 5, 28), FRIDAY, 4) == "overdue"
+
+    def test_this_week_is_week_0(self):
+        assert weekly_bucket_key(FRIDAY, FRIDAY, 4) == "week_0"
+
+    def test_next_week_is_week_1(self):
+        assert weekly_bucket_key(date(2026, 6, 8), FRIDAY, 4) == "week_1"
+
+    def test_third_week_is_week_2(self):
+        assert weekly_bucket_key(date(2026, 6, 15), FRIDAY, 4) == "week_2"
+
+    def test_fourth_week_is_week_3(self):
+        assert weekly_bucket_key(date(2026, 6, 22), FRIDAY, 4) == "week_3"
+
+    def test_beyond_horizon_is_later(self):
+        # 5th week out with horizon 4 -> later
+        assert weekly_bucket_key(date(2026, 6, 29), FRIDAY, 4) == "later"
+
+    def test_horizon_2_collapses_third_week(self):
+        assert weekly_bucket_key(date(2026, 6, 15), FRIDAY, 2) == "later"
