@@ -238,7 +238,10 @@ export function SimpleGantt({
             position: "sticky",
             top: 0,
             left: 0,
-            zIndex: 40,
+            // Keep below ModalCore (z-30) so the create-issue modal renders
+            // above the gantt's sticky corner. Internal order: corner(25) >
+            // timeline header(24) > left column(20).
+            zIndex: 25,
             backgroundColor: STICKY_BG_ALT,
             gridColumn: 1,
             gridRow: 1,
@@ -263,7 +266,7 @@ export function SimpleGantt({
           style={{
             position: "sticky",
             top: 0,
-            zIndex: 30,
+            zIndex: 24,
             backgroundColor: STICKY_BG_ALT,
             gridColumn: 2,
             gridRow: 1,
