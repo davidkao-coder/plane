@@ -6,10 +6,17 @@
 
 import * as React from "react";
 import { DayPicker } from "react-day-picker";
-import { zhTW } from "date-fns/locale";
 import { ChevronLeftIcon } from "../icons/arrows/chevron-left";
 
 import { cn } from "../utils";
+
+// Traditional-Chinese (Taiwan) date-picker labels — implemented locally so
+// propel needn't depend on date-fns. Month caption "2026年6月", weekday "日".
+const ZH_WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
+const zhFormatters = {
+  formatCaption: (month: Date) => `${month.getFullYear()}年${month.getMonth() + 1}月`,
+  formatWeekdayName: (day: Date) => ZH_WEEKDAYS[day.getDay()],
+};
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
@@ -20,7 +27,7 @@ export function Calendar({ className, showOutsideDays = true, ...props }: Calend
 
   return (
     <DayPicker
-      locale={zhTW}
+      formatters={zhFormatters}
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       weekStartsOn={props.weekStartsOn}
