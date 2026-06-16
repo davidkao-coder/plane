@@ -735,6 +735,7 @@ function WorkboardPage({ params }: Route.ComponentProps) {
           requirements={requirements}
           features={features}
           issues={filteredIssues}
+          stageFilter={stageFilter}
           onAddModule={() => setAddTarget({ kind: "module" })}
           onAddRequirement={(moduleId) => setAddTarget({ kind: "requirement", moduleId })}
           onAddFeature={(requirementId) => setAddTarget({ kind: "feature", requirementId })}
@@ -1158,6 +1159,9 @@ type LayoutAProps = {
   features: IFeature[];
   issues: TFeatureIssue[];
   loading: boolean;
+  // Active stage filter id (null = 全部階段). When set, the 分類/需求/功能
+  // sections collapse to only the branches that contain a matching Issue.
+  stageFilter: string | null;
   onAddModule: () => void;
   onAddRequirement: (moduleId: string) => void;
   onAddFeature: (requirementId: string) => void;
@@ -1173,19 +1177,53 @@ type LayoutAProps = {
 };
 
 function LayoutAStacked(props: LayoutAProps) {
-  const { modules, requirements, features, issues, loading } = props;
+  const { modules, requirements, features, issues, loading, stageFilter } = props;
+  const stageFiltered = stageFilter !== null;
   const [selModule, setSelModule] = useState<string | null>(null);
   const [selRequirement, setSelRequirement] = useState<string | null>(null);
   const [selFeature, setSelFeature] = useState<string | null>(null);
 
-  const visibleReqs = useMemo(
-    () => (selModule ? requirements.filter((r) => r.module === selModule) : requirements),
-    [requirements, selModule]
+  // Switching / clearing the stage filter resets the drill selection so the
+  // cascaded sections start from the top rather than a now-empty branch.
+  useEffect(() => {
+    setSelModule(null);
+    setSelRequirement(null);
+    setSelFeature(null);
+  }, [stageFilter]);
+
+  // `issues` is already stage-filtered by the parent. Derive the set of
+  // module / requirement / feature ids that still have a matching Issue so the
+  // upper sections can collapse to only the relevant branches when a stage is
+  // selected (previously they ignored the stage filter entirely → 堆疊 view
+  // looked unresponsive when clicking a stage).
+  const matchModuleIds = useMemo(
+    () => new Set(issues.map((i) => i.module_id).filter(Boolean) as string[]),
+    [issues]
   );
-  const visibleFeatures = useMemo(
-    () => (selRequirement ? features.filter((f) => f.requirement === selRequirement) : features),
-    [features, selRequirement]
+  const matchReqIds = useMemo(
+    () => new Set(issues.map((i) => i.requirement_id).filter(Boolean) as string[]),
+    [issues]
   );
+  const matchFeatIds = useMemo(
+    () => new Set(issues.map((i) => i.feature_id).filter(Boolean) as string[]),
+    [issues]
+  );
+
+  const shownModules = useMemo(
+    () => (stageFiltered ? modules.filter((m) => matchModuleIds.has(m.id)) : modules),
+    [modules, stageFiltered, matchModuleIds]
+  );
+
+  const visibleReqs = useMemo(() => {
+    let rs = selModule ? requirements.filter((r) => r.module === selModule) : requirements;
+    if (stageFiltered) rs = rs.filter((r) => matchReqIds.has(r.id));
+    return rs;
+  }, [requirements, selModule, stageFiltered, matchReqIds]);
+  const visibleFeatures = useMemo(() => {
+    let fs = selRequirement ? features.filter((f) => f.requirement === selRequirement) : features;
+    if (stageFiltered) fs = fs.filter((f) => matchFeatIds.has(f.id));
+    return fs;
+  }, [features, selRequirement, stageFiltered, matchFeatIds]);
   // Properly filter issues by selected node via feature_id (now exposed by API)
   const finalIssues = useMemo(() => {
     if (selFeature) {
@@ -1205,9 +1243,9 @@ function LayoutAStacked(props: LayoutAProps) {
   return (
     <div className="flex flex-col gap-3 p-4 overflow-y-auto">
       {/* Modules */}
-      <Section title={`分類 · ${modules.length}`} onAdd={props.onAddModule} addLabel="新增分類">
+      <Section title={`分類 · ${shownModules.length}${stageFiltered ? "（已篩選）" : ""}`} onAdd={props.onAddModule} addLabel="新增分類">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-          {modules.map((m) => (
+          {shownModules.map((m) => (
             <Card
               key={m.id}
               selected={selModule === m.id}
@@ -1224,7 +1262,7 @@ function LayoutAStacked(props: LayoutAProps) {
               <Folder className="size-3.5 text-amber-500" />
               <span className="truncate">{m.name}</span>
               <span className="text-10 text-tertiary ml-auto">
-                {requirements.filter((r) => r.module === m.id).length}
+                {requirements.filter((r) => r.module === m.id && (!stageFiltered || matchReqIds.has(r.id))).length}
               </span>
             </Card>
           ))}
@@ -1253,7 +1291,7 @@ function LayoutAStacked(props: LayoutAProps) {
                 <span>{r.description.slice(0, 28)}</span>
               </div>
               <span className="text-10 text-tertiary ml-auto">
-                {features.filter((f) => f.requirement === r.id).length}
+                {features.filter((f) => f.requirement === r.id && (!stageFiltered || matchFeatIds.has(f.id))).length}
               </span>
             </Card>
           ))}
