@@ -36,7 +36,11 @@ export function SettingsSidebarItem(props: Props) {
   const content = (
     <>
       {"icon" in props ? (
-        <span className="grid size-4 shrink-0 place-items-center">{<props.icon className="size-3.5" />}</span>
+        // Guard against a missing icon (undefined) — rendering <undefined/> throws
+        // React #130 and would crash the whole settings sidebar.
+        props.icon ? (
+          <span className="grid size-4 shrink-0 place-items-center">{<props.icon className="size-3.5" />}</span>
+        ) : null
       ) : (
         props.iconNode
       )}

@@ -5,7 +5,7 @@
  */
 
 import type { LucideIcon } from "lucide-react";
-import { ArrowUpToLine, Building, CreditCard, Users, Webhook } from "lucide-react";
+import { ArrowUpToLine, Building, CreditCard, LayoutTemplate, Users, Webhook } from "lucide-react";
 // plane imports
 import type { ISvgIcons } from "@plane/propel/icons";
 import type { TWorkspaceSettingsTabs } from "@plane/types";
@@ -16,4 +16,7 @@ export const WORKSPACE_SETTINGS_ICONS: Record<TWorkspaceSettingsTabs, LucideIcon
   export: ArrowUpToLine,
   "billing-and-plans": CreditCard,
   webhooks: Webhook,
+  // TMS Phase 1.5 — templates settings tab; without this the sidebar rendered
+  // <undefined/> for the templates item and crashed every settings page (React #130).
+  templates: LayoutTemplate,
 };
