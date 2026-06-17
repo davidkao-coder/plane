@@ -16,6 +16,8 @@ import { cn } from "@plane/utils";
 import { twMonthDay, twShortDate } from "@/components/tms/format-date";
 // components
 import { PageHead } from "@/components/core/page-title";
+import { WeekTimesheet } from "@/components/tms/week-timesheet";
+import { useUser } from "@/hooks/store/user";
 // services
 import {
   TMSDashboardService,
@@ -61,6 +63,7 @@ const PRIORITY_LABEL: Record<string, string> = {
 function MyQueuePage({ params }: Route.ComponentProps) {
   const { workspaceSlug } = params;
   const slug = workspaceSlug.toString();
+  const { data: currentUser } = useUser();
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -142,10 +145,26 @@ function MyQueuePage({ params }: Route.ComponentProps) {
           <div className="text-tertiary text-13 py-10 text-center">目前沒有指派給你的待辦工作項目 🎉</div>
         )}
 
+        {/* 本週工時填寫表 — editable daily-hours grid for this week's items */}
+        {!loading &&
+          queue &&
+          (() => {
+            const wk = queue.buckets.find((b) => b.key === "week_0" && b.count > 0);
+            return wk ? (
+              <WeekTimesheet
+                slug={slug}
+                userId={currentUser?.id}
+                weekStart={wk.week_start}
+                issues={wk.issues}
+                onEscalate={handleEscalate}
+              />
+            ) : null;
+          })()}
+
         {!loading &&
           queue &&
           queue.buckets
-            .filter((b) => b.count > 0)
+            .filter((b) => b.count > 0 && b.key !== "week_0")
             .map((bucket) => {
               const meta = bucketMeta(bucket);
               const Icon = meta.icon;
