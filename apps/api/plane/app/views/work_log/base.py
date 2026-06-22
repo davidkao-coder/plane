@@ -30,8 +30,17 @@ BACKFILL_DAYS = 14
 SELF_EDIT_DAYS = 7
 
 
-def _is_manager(user) -> bool:
-    return getattr(user, "role", "member") == "manager"
+def _is_pm(user, project_id) -> bool:
+    """PM == project Admin (role 20). Only a PM may backfill old work logs or
+    edit/delete a work log once it has been submitted."""
+    from plane.db.models import ProjectMember
+
+    return ProjectMember.objects.filter(
+        member=user,
+        project_id=project_id,
+        is_active=True,
+        role=ROLE.ADMIN.value,
+    ).exists()
 
 
 class WorkLogViewSet(BaseViewSet):
@@ -87,7 +96,7 @@ class WorkLogViewSet(BaseViewSet):
 
         # Backfill window check (skipped for managers – they can adjust historical data)
         log_date = request.data.get("log_date")
-        if log_date and not _is_manager(request.user):
+        if log_date and not _is_pm(request.user, project_id):
             try:
                 from datetime import date as _date
                 parsed = _date.fromisoformat(str(log_date))
@@ -139,15 +148,11 @@ class WorkLogViewSet(BaseViewSet):
             return None
 
     def _can_edit(self, request, work_log) -> tuple[bool, str]:
-        """Edit window enforcement."""
-        if _is_manager(request.user):
+        """TMS #6 — a work log is locked once submitted. Only a project Admin
+        (PM) may edit or delete it; the author cannot change it afterwards."""
+        if _is_pm(request.user, work_log.project_id):
             return True, ""
-        if work_log.user_id != request.user.id:
-            return False, "You can only edit your own work logs."
-        age = (timezone.now() - work_log.created_at).days
-        if age > SELF_EDIT_DAYS:
-            return False, f"Work logs older than {SELF_EDIT_DAYS} days are read-only."
-        return True, ""
+        return False, "工時送出後不可修改／刪除，請洽專案管理者(PM)協助調整。"
 
     @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST])
     def retrieve(self, request, slug, project_id, issue_id, pk):

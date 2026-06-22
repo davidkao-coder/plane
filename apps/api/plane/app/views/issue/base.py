@@ -394,7 +394,7 @@ class IssueViewSet(BaseViewSet):
                 on_results=lambda issues: issue_on_results(group_by=group_by, issues=issues, sub_group_by=sub_group_by),
             )
 
-    @allow_permission([ROLE.ADMIN, ROLE.MEMBER])
+    @allow_permission([ROLE.ADMIN])  # TMS #7 — only a PM (project Admin) may create work items
     def create(self, request, slug, project_id):
         project = Project.objects.get(pk=project_id)
 
@@ -624,6 +624,22 @@ class IssueViewSet(BaseViewSet):
 
     @allow_permission(allowed_roles=[ROLE.ADMIN, ROLE.MEMBER], creator=True, model=Issue)
     def partial_update(self, request, slug, project_id, pk=None):
+        # TMS #7 — only a PM (project Admin) may change schedule dates. Members
+        # can still update status / other fields, but not start/target dates.
+        if "start_date" in request.data or "target_date" in request.data:
+            is_pm = ProjectMember.objects.filter(
+                workspace__slug=slug,
+                project_id=project_id,
+                member=request.user,
+                role=20,
+                is_active=True,
+            ).exists()
+            if not is_pm:
+                return Response(
+                    {"error": "只有專案管理者(PM)可以調整工作項目的排程日期。"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
         queryset = self.get_queryset()
         queryset = self.apply_annotations(queryset)
 
@@ -1126,7 +1142,7 @@ class IssueBulkUpdateDateEndpoint(BaseAPIView):
             return False
         return True
 
-    @allow_permission([ROLE.ADMIN, ROLE.MEMBER])
+    @allow_permission([ROLE.ADMIN])  # TMS #7 — only a PM (project Admin) may reschedule dates
     def post(self, request, slug, project_id):
         updates = request.data.get("updates", [])
 
