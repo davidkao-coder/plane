@@ -245,6 +245,14 @@ function WorkboardPage({ params }: Route.ComponentProps) {
     [stages]
   );
 
+  // Issue count per stage (from the full unfiltered set) — drives the
+  // Stage-layer cards in the stacked view.
+  const stageCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const i of issues) if (i.stage_id) m[i.stage_id] = (m[i.stage_id] ?? 0) + 1;
+    return m;
+  }, [issues]);
+
   const reqsByModule = useMemo(() => {
     const m = new Map<string, IRequirement[]>();
     for (const r of requirements) {
@@ -736,6 +744,10 @@ function WorkboardPage({ params }: Route.ComponentProps) {
           features={features}
           issues={filteredIssues}
           stageFilter={stageFilter}
+          stages={standardStages}
+          stageCounts={stageCounts}
+          totalCount={issues.length}
+          onStageFilter={setStageFilter}
           onAddModule={() => setAddTarget({ kind: "module" })}
           onAddRequirement={(moduleId) => setAddTarget({ kind: "requirement", moduleId })}
           onAddFeature={(requirementId) => setAddTarget({ kind: "feature", requirementId })}
@@ -1161,7 +1173,12 @@ type LayoutAProps = {
   loading: boolean;
   // Active stage filter id (null = 全部階段). When set, the 分類/需求/功能
   // sections collapse to only the branches that contain a matching Issue.
+  // Stage is rendered as the FIRST drill layer (階段→分類→需求→功能→工作項目).
   stageFilter: string | null;
+  stages: IStage[];
+  stageCounts: Record<string, number>;
+  totalCount: number;
+  onStageFilter: (id: string | null) => void;
   onAddModule: () => void;
   onAddRequirement: (moduleId: string) => void;
   onAddFeature: (requirementId: string) => void;
@@ -1178,6 +1195,7 @@ type LayoutAProps = {
 
 function LayoutAStacked(props: LayoutAProps) {
   const { modules, requirements, features, issues, loading, stageFilter } = props;
+  const { stages, stageCounts, totalCount, onStageFilter } = props;
   const stageFiltered = stageFilter !== null;
   const [selModule, setSelModule] = useState<string | null>(null);
   const [selRequirement, setSelRequirement] = useState<string | null>(null);
@@ -1243,6 +1261,22 @@ function LayoutAStacked(props: LayoutAProps) {
   return (
     <div className="flex flex-col gap-3 p-4 overflow-y-auto">
       {/* Modules */}
+      {/* Stage — first drill layer (階段→分類→需求→功能→工作項目) */}
+      <Section title={`階段 · ${stages.length}`}>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
+          <Card selected={!stageFilter} onClick={() => onStageFilter(null)}>
+            <span className="truncate">全部階段</span>
+            <span className="text-10 text-tertiary ml-auto">{totalCount}</span>
+          </Card>
+          {stages.map((s) => (
+            <Card key={s.id} selected={stageFilter === s.id} onClick={() => onStageFilter(s.id)}>
+              <span className="truncate">{s.name}</span>
+              <span className="text-10 text-tertiary ml-auto">{stageCounts[s.id] ?? 0}</span>
+            </Card>
+          ))}
+        </div>
+      </Section>
+
       <Section title={`分類 · ${shownModules.length}${stageFiltered ? "（已篩選）" : ""}`} onAdd={props.onAddModule} addLabel="新增分類">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
           {shownModules.map((m) => (

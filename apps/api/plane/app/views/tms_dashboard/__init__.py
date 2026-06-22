@@ -4,6 +4,7 @@ from .base import (
     CapacityEndpoint,
     WeeklyReportEndpoint,
     MyHoursEndpoint,
+    DailyReportEndpoint,
 )
 from .escalate import IssueEscalateEndpoint
 from .export import TMSExportEndpoint

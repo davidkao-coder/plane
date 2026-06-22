@@ -129,6 +129,14 @@ export const coreRoutes: RouteConfigEntry[] = [
           ),
         ]),
 
+        // TMS #8 – end-of-day daily report (per member + per project)
+        layout("./(all)/[workspaceSlug]/(projects)/daily-report/layout.tsx", [
+          route(
+            ":workspaceSlug/daily-report",
+            "./(all)/[workspaceSlug]/(projects)/daily-report/page.tsx"
+          ),
+        ]),
+
         // TMS Phase 2 / B3 – resource capacity planner (PC)
         layout("./(all)/[workspaceSlug]/(projects)/capacity/layout.tsx", [
           route(

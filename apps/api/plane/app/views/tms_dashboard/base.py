@@ -502,3 +502,51 @@ class MyHoursEndpoint(BaseAPIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class DailyReportEndpoint(BaseAPIView):
+    """TMS #8 — end-of-day snapshot for the workspace.
+
+    GET /workspaces/<slug>/daily-report/?date=YYYY-MM-DD
+    (date defaults to today in Asia/Taipei). Returns the stored snapshot,
+    generating it on-demand if it doesn't exist yet (the Celery beat task
+    pre-generates it at 23:30 Taipei each day).
+    """
+
+    @allow_permission([ROLE.ADMIN, ROLE.MEMBER, ROLE.GUEST], level="WORKSPACE")
+    def get(self, request, slug):
+        from datetime import date as _date, datetime
+        from zoneinfo import ZoneInfo
+        from plane.db.models import Workspace, DailyReport
+        from plane.utils.tms_daily_report import upsert_daily_report
+
+        ws = Workspace.objects.filter(slug=slug).first()
+        if ws is None:
+            return Response({"error": "Workspace not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        date_str = request.query_params.get("date")
+        if date_str:
+            try:
+                report_date = _date.fromisoformat(date_str)
+            except ValueError:
+                return Response(
+                    {"error": "date must be YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            report_date = datetime.now(ZoneInfo("Asia/Taipei")).date()
+
+        report = DailyReport.objects.filter(
+            workspace=ws, report_date=report_date, deleted_at__isnull=True
+        ).first()
+        # Generate on-demand if missing, or refresh today's (live data).
+        if report is None or report_date == datetime.now(ZoneInfo("Asia/Taipei")).date():
+            report = upsert_daily_report(ws, report_date)
+
+        return Response(
+            {
+                "date": report_date.isoformat(),
+                "generated_at": report.generated_at.isoformat() if report.generated_at else None,
+                **(report.data or {}),
+            },
+            status=status.HTTP_200_OK,
+        )

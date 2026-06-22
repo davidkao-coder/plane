@@ -188,6 +188,7 @@ from .tms_dashboard import (
     CapacityEndpoint,
     WeeklyReportEndpoint,
     MyHoursEndpoint,
+    DailyReportEndpoint,
     IssueEscalateEndpoint,
     TMSExportEndpoint,
 )

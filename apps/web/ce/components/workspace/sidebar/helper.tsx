@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, CalendarCheck } from "lucide-react";
 import {
   AnalyticsIcon,
   ArchiveIcon,
@@ -43,5 +43,7 @@ export const getSidebarNavigationItemIcon = (key: string, className: string = ""
       return <MultipleStickyIcon className={cn("size-4 flex-shrink-0", className)} />;
     case "projects_overview":
       return <LayoutDashboard className={cn("size-4 flex-shrink-0", className)} />;
+    case "daily_report":
+      return <CalendarCheck className={cn("size-4 flex-shrink-0", className)} />;
   }
 };

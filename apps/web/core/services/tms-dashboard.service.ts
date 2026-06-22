@@ -71,6 +71,46 @@ export type TMyQueue = {
   total: number;
 };
 
+export type TDailyReportItem = {
+  issue_id: string | null;
+  name: string;
+  project_name: string;
+  state_name: string | null;
+  state_group: string | null;
+  stage_name: string | null;
+  hours: number;
+};
+
+export type TDailyReportMember = {
+  user_id: string;
+  display_name: string;
+  email: string;
+  logged_hours: number;
+  items: TDailyReportItem[];
+  open_assigned: number;
+  overdue_assigned: number;
+};
+
+export type TDailyReportProject = {
+  project_id: string;
+  identifier: string;
+  name: string;
+  total: number;
+  done: number;
+  in_progress: number;
+  overdue: number;
+  progress_pct: number;
+  hours_today: number;
+};
+
+export type TDailyReport = {
+  date: string;
+  generated_at: string | null;
+  per_member: TDailyReportMember[];
+  per_project: TDailyReportProject[];
+  totals: { members_reported: number; logged_hours: number; projects: number };
+};
+
 export type TReportIssue = {
   id: string;
   sequence_id: number;
@@ -181,6 +221,14 @@ export class TMSDashboardService extends APIService {
     by_project: { project_id: string; project_name: string; hours: number }[];
   }> {
     return this.get(`/api/workspaces/${slug}/my-hours/`, { params: opts })
+      .then((r) => r?.data)
+      .catch((e) => {
+        throw e?.response?.data;
+      });
+  }
+
+  async getDailyReport(slug: string, date?: string): Promise<TDailyReport> {
+    return this.get(`/api/workspaces/${slug}/daily-report/`, { params: date ? { date } : {} })
       .then((r) => r?.data)
       .catch((e) => {
         throw e?.response?.data;

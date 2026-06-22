@@ -214,6 +214,13 @@ export const WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS: Record<string, IWorkspa
     access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
     highlight: (pathname: string, url: string) => pathname.includes(url),
   },
+  daily_report: {
+    key: "daily_report",
+    labelTranslationKey: "sidebar.daily_report",
+    href: `/daily-report/`,
+    access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
+    highlight: (pathname: string, url: string) => pathname.includes(url),
+  },
   capacity: {
     key: "capacity",
     labelTranslationKey: "sidebar.capacity",
@@ -254,6 +261,7 @@ export const WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS: Record<string, IWorkspa
 export const WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS: IWorkspaceSidebarNavigationItem[] = [
   WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["my_queue"],
   WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["tms_dashboard"],
+  WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["daily_report"],
   WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["capacity"],
   WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["views"],
   WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["analytics"],

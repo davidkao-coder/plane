@@ -21,6 +21,7 @@ export default {
     workboard: "整合檢視",
     my_queue: "我的隊列",
     tms_dashboard: "專案儀表板",
+    daily_report: "每日報告",
     capacity: "資源容量",
     stages: "階段",
     requirements: "需求",

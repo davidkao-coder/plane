@@ -77,6 +77,11 @@ app.conf.beat_schedule = {
         "task": "plane.bgtasks.exporter_expired_task.delete_old_s3_link",
         "schedule": crontab(hour=3, minute=45),  # UTC 03:45
     },
+    # TMS #8 – end-of-day daily report snapshot (per member + per project)
+    "generate-daily-reports-end-of-day": {
+        "task": "plane.bgtasks.daily_report_task.generate_daily_reports",
+        "schedule": crontab(hour=15, minute=30),  # 15:30 UTC = 23:30 Asia/Taipei
+    },
 }
 
 
