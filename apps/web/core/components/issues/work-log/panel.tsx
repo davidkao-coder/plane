@@ -26,6 +26,8 @@ import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { IUser, IWorkLog, TWorkLogWritePayload } from "@plane/types";
 import { Input, TextArea } from "@plane/ui";
 // services
+import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
+import { useUserPermissions } from "@/hooks/store/user";
 import { WorkLogService } from "@/services/work-log.service";
 import { twShortDate } from "@/components/tms/format-date";
 
@@ -81,7 +83,15 @@ export const WorkLogPanel = observer(function WorkLogPanel({
   targetDate,
   currentUser,
 }: Props) {
-  const isManager = currentUser?.role === "manager";
+  // TMS #6 — a work log is locked once submitted; only a PM (project Admin)
+  // may edit/delete it. Mirrors the backend enforcement.
+  const { allowPermissions } = useUserPermissions();
+  const isPM = allowPermissions(
+    [EUserPermissions.ADMIN],
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    projectId
+  );
 
   const [logs, setLogs] = useState<IWorkLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,12 +214,9 @@ export const WorkLogPanel = observer(function WorkLogPanel({
     }
   };
 
-  const canEditOwn = (log: IWorkLog) => {
-    if (isManager) return true;
-    if (!currentUser?.id || log.user !== currentUser.id) return false;
-    const ageDays = (Date.now() - new Date(log.created_at).getTime()) / (1000 * 60 * 60 * 24);
-    return ageDays <= 7;
-  };
+  // Only a PM (project Admin) can edit/delete a submitted work log; the author
+  // cannot change it after submitting (the backend rejects it either way).
+  const canEditOwn = (_log: IWorkLog) => isPM;
 
   return (
     <div className="flex flex-col gap-4">

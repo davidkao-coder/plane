@@ -43,7 +43,9 @@ import { RequirementService } from "@/services/requirement.service";
 import { StageService } from "@/services/stage.service";
 import { ProcessTemplateService, type TProcessStep } from "@/services/project-template.service";
 // hooks
+import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useProjectState } from "@/hooks/store/use-project-state";
+import { useUserPermissions } from "@/hooks/store/user";
 import type { Route } from "./+types/page";
 
 const moduleService = new ModuleService();
@@ -77,6 +79,9 @@ function WorkboardPage({ params }: Route.ComponentProps) {
   const { workspaceSlug, projectId } = params;
   const slug = workspaceSlug.toString();
   const pid = projectId.toString();
+  // TMS #7 — only a PM (project Admin) may create work items / structure.
+  const { allowPermissions } = useUserPermissions();
+  const isPM = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, slug, pid);
 
   const [loading, setLoading] = useState(true);
   const [modules, setModules] = useState<IModule[]>([]);
@@ -432,13 +437,15 @@ function WorkboardPage({ params }: Route.ComponentProps) {
         <aside className="w-80 flex-shrink-0 border-r border-subtle overflow-y-auto">
           <div className="px-3 py-2 border-b border-subtle bg-surface-2/60 flex items-center justify-between">
             <h3 className="text-12 font-semibold text-secondary">業務樹</h3>
-            <button
-              type="button"
-              onClick={() => setAddTarget({ kind: "module" })}
-              className="text-11 text-blue-600 hover:underline inline-flex items-center gap-0.5"
-            >
-              <Plus className="size-3" />分類
-            </button>
+            {isPM && (
+              <button
+                type="button"
+                onClick={() => setAddTarget({ kind: "module" })}
+                className="text-11 text-blue-600 hover:underline inline-flex items-center gap-0.5"
+              >
+                <Plus className="size-3" />分類
+              </button>
+            )}
           </div>
 
           <div className="p-2 text-13">
@@ -498,7 +505,7 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                         {progressLabel(issuesByModule.get(m.id))}
                       </span>
                       <span className="invisible group-hover:visible flex items-center gap-0.5 ml-1">
-                        <NodeActionBtn icon={Plus} title="加需求" onClick={() => setAddTarget({ kind: "requirement", moduleId: m.id })} />
+                        {isPM && <NodeActionBtn icon={Plus} title="加需求" onClick={() => setAddTarget({ kind: "requirement", moduleId: m.id })} />}
                         {!isUnsorted && (
                           <>
                             <NodeActionBtn icon={Pencil} title="編輯" onClick={() => setEditTarget({ kind: "module", data: m })} />
@@ -561,7 +568,7 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                                 {progressLabel(issuesByRequirement.get(r.id))}
                               </span>
                               <span className="invisible group-hover:visible flex items-center gap-0.5 ml-1">
-                                <NodeActionBtn icon={Plus} title="加功能" onClick={() => setAddTarget({ kind: "feature", requirementId: r.id })} />
+                                {isPM && <NodeActionBtn icon={Plus} title="加功能" onClick={() => setAddTarget({ kind: "feature", requirementId: r.id })} />}
                                 <NodeActionBtn icon={Pencil} title="編輯" onClick={() => setEditTarget({ kind: "requirement", data: r })} />
                                 <NodeActionBtn icon={Trash2} title="刪除" danger onClick={() => handleDeleteRequirement(r)} />
                               </span>
@@ -613,7 +620,7 @@ function WorkboardPage({ params }: Route.ComponentProps) {
                                     {progressLabel(issuesByFeature.get(f.id))}
                                   </span>
                                   <span className="invisible group-hover:visible flex items-center gap-0.5 ml-1">
-                                    <NodeActionBtn icon={Plus} title="加工項" onClick={() => setAddTarget({ kind: "issue", featureId: f.id })} />
+                                    {isPM && <NodeActionBtn icon={Plus} title="加工項" onClick={() => setAddTarget({ kind: "issue", featureId: f.id })} />}
                                     <NodeActionBtn icon={Pencil} title="編輯" onClick={() => setEditTarget({ kind: "feature", data: f })} />
                                     <NodeActionBtn icon={Trash2} title="刪除" danger onClick={() => handleDeleteFeature(f)} />
                                   </span>
@@ -748,6 +755,7 @@ function WorkboardPage({ params }: Route.ComponentProps) {
           stageCounts={stageCounts}
           totalCount={issues.length}
           onStageFilter={setStageFilter}
+          canCreate={isPM}
           onAddModule={() => setAddTarget({ kind: "module" })}
           onAddRequirement={(moduleId) => setAddTarget({ kind: "requirement", moduleId })}
           onAddFeature={(requirementId) => setAddTarget({ kind: "feature", requirementId })}
@@ -1179,6 +1187,7 @@ type LayoutAProps = {
   stageCounts: Record<string, number>;
   totalCount: number;
   onStageFilter: (id: string | null) => void;
+  canCreate: boolean;
   onAddModule: () => void;
   onAddRequirement: (moduleId: string) => void;
   onAddFeature: (requirementId: string) => void;
@@ -1195,7 +1204,7 @@ type LayoutAProps = {
 
 function LayoutAStacked(props: LayoutAProps) {
   const { modules, requirements, features, issues, loading, stageFilter } = props;
-  const { stages, stageCounts, totalCount, onStageFilter } = props;
+  const { stages, stageCounts, totalCount, onStageFilter, canCreate } = props;
   const stageFiltered = stageFilter !== null;
   const [selModule, setSelModule] = useState<string | null>(null);
   const [selRequirement, setSelRequirement] = useState<string | null>(null);
@@ -1277,7 +1286,7 @@ function LayoutAStacked(props: LayoutAProps) {
         </div>
       </Section>
 
-      <Section title={`分類 · ${shownModules.length}${stageFiltered ? "（已篩選）" : ""}`} onAdd={props.onAddModule} addLabel="新增分類">
+      <Section title={`分類 · ${shownModules.length}${stageFiltered ? "（已篩選）" : ""}`} onAdd={canCreate ? props.onAddModule : undefined} addLabel="新增分類">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
           {shownModules.map((m) => (
             <Card
@@ -1290,7 +1299,7 @@ function LayoutAStacked(props: LayoutAProps) {
               }}
               onEdit={() => props.onEditModule(m)}
               onDelete={() => props.onDeleteModule(m)}
-              onAddChild={() => props.onAddRequirement(m.id)}
+              onAddChild={canCreate ? () => props.onAddRequirement(m.id) : undefined}
               addChildLabel="加需求"
             >
               <Folder className="size-3.5 text-amber-500" />
@@ -1316,7 +1325,7 @@ function LayoutAStacked(props: LayoutAProps) {
               }}
               onEdit={() => props.onEditRequirement(r)}
               onDelete={() => props.onDeleteRequirement(r)}
-              onAddChild={() => props.onAddFeature(r.id)}
+              onAddChild={canCreate ? () => props.onAddFeature(r.id) : undefined}
               addChildLabel="加功能"
             >
               <ListChecks className="size-3.5 text-blue-500" />
@@ -1342,7 +1351,7 @@ function LayoutAStacked(props: LayoutAProps) {
               onClick={() => setSelFeature(selFeature === f.id ? null : f.id)}
               onEdit={() => props.onEditFeature(f)}
               onDelete={() => props.onDeleteFeature(f)}
-              onAddChild={() => props.onAddIssue(f.id)}
+              onAddChild={canCreate ? () => props.onAddIssue(f.id) : undefined}
               addChildLabel="加工項"
             >
               <Package className="size-3.5 text-emerald-500" />
